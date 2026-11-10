@@ -288,15 +288,17 @@ export default function Profile() {
                 This setting does not perform currency conversion.
               </div>
               <Input
+                disabled="true" // TEMPORARILY DISABLED AND WILL BE UPDATED LATER ###################
                 label="Profile image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 hint="Optional. JPEG, PNG, or WebP up to 1 MB."
                 onChange={handleImageChange}
               />
+              <p style={{ color: 'red', fontSize: '11px' }}>Right now image function is disabled and will be enabled later.</p>
               {user?.profile_image_url && (
                 <div>
-                  <Button type="button" variant="secondary" size="sm" loading={removingImage} onClick={handleRemoveProfileImage}>
+                  <Button disabled type="button" variant="secondary" size="sm" loading={removingImage} onClick={handleRemoveProfileImage}>
                     Remove profile image
                   </Button>
                 </div>

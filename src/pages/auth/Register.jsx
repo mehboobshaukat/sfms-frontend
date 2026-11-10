@@ -162,8 +162,9 @@ export default function Register() {
           <p className="au-hint" style={{ margin: "-4px 0 16px" }}>Your country sets the currency you will see.</p>
 
           <div className="au-sec"><i>3</i>Profile photo <span style={{ fontWeight: 600, textTransform: "none", letterSpacing: 0, color: "#62728f" }}>(optional)</span></div>
-          <label className="au-file">
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} />
+          <p style={{ color: 'red', fontSize: '11px' }}>Right now image function is disabled and will be enabled later.</p>
+          <label className="au-file" style={{ cursor: 'not-allowed' }}>
+            <input disabled="true" cursor="none" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} />
             <span className="au-thumb">{previewUrl ? <img src={previewUrl} alt="Selected profile" /> : <Ic n="image" s={22} />}</span>
             <span><b>{profileImage ? profileImage.name : "Choose a photo"}</b><small>JPEG, PNG, or WebP up to 1 MB.</small></span>
           </label>
