@@ -1,0 +1,58 @@
+/* SFMS HowItWorks page: styles used only by this page. Shared styles are in ./common.css. */
+.sfms-home {
+  .hw-panel h3 { font-family: var(--display); }
+  /* ---------- How it works ---------- */
+  .hw-jr { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 36px; align-items: start; }
+  .hw-list { display: grid; gap: 10px; }
+  .hw-step { position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; text-align: left; transition: border-color 0.3s, box-shadow 0.3s, translate 0.3s; }
+  .hw-step b { display: block; font-size: 0.98rem; }
+  .hw-step small { color: var(--mute); font-size: 0.78rem; }
+  .hw-step.on { border-color: #9cc4fb; box-shadow: var(--sh); translate: 6px 0; }
+  .hw-step::after { content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--cyan), var(--blue)); }
+  .hw-step.on::after { animation: sfms-fill 6s linear forwards; }
+  .hw-step.on.hold::after { animation-play-state: paused; }
+  .hw-panel { position: sticky; top: 96px; min-height: 400px; padding: 30px; overflow: hidden; border-radius: 26px; color: #fff; background: linear-gradient(135deg, #071a3d, #0b3a8f); box-shadow: 0 30px 60px rgba(10, 50, 130, 0.25); animation: sfms-in 0.5s both; }
+  .hw-panel::before { content: ""; position: absolute; right: -80px; top: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(23, 200, 242, 0.35), transparent 70%); }
+  .hw-panel > * { position: relative; }
+  .hw-panel .ico { background: rgba(23, 200, 242, 0.18); color: var(--cyan); }
+  .hw-panel h3 { margin: 16px 0 8px; font-size: 1.5rem; letter-spacing: -0.03em; }
+  .hw-panel p { color: #b9cbee; }
+  .hw-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 18px; }
+  .hw-tags span { padding: 5px 11px; border-radius: 99px; background: rgba(23, 200, 242, 0.15); color: #8be6ff; font-size: 0.74rem; font-weight: 700; }
+  .hw-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, 0.14); font-size: 0.9rem; animation: sfms-in 0.5s both; animation-delay: calc(var(--i) * 90ms + 0.1s); }
+  .hw-row span { color: #b9cbee; }
+  .hw-ill { display: block; margin-top: 12px; font-size: 0.72rem; color: #8fa6d3; }
+  .hw-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .hw-pill { padding: 9px 16px; border: 1px solid var(--line); border-radius: 99px; background: #fff; font-size: 0.84rem; font-weight: 700; transition: background 0.25s, color 0.25s, border-color 0.25s, transform 0.25s; }
+  .hw-pill:hover { transform: translateY(-2px); }
+  .hw-pill.on { border-color: var(--blue); color: #fff; background: var(--blue); }
+  .hw-paths { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 960px; margin: auto; }
+  .hw-path { padding: 28px; border: 1px solid var(--line); border-radius: 22px; background: #fff; }
+  .hw-path.hw-ai { border: 0; color: #fff; background: linear-gradient(135deg, #0a2c6e, #1565ff); box-shadow: 0 26px 50px rgba(21, 101, 255, 0.28); }
+  .hw-path h3 { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .hw-path ol { display: grid; margin: 0; padding: 0; list-style: none; }
+  .hw-path li { display: flex; align-items: center; gap: 12px; padding: 11px 0; font-size: 0.92rem; }
+  .hw-path li + li { border-top: 1px solid #eef3fb; }
+  .hw-path.hw-ai li + li { border-color: rgba(255, 255, 255, 0.18); }
+  .hw-path li i { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; background: #e6f1ff; color: var(--blue); font-size: 0.78rem; font-style: normal; font-weight: 800; }
+  .hw-path.hw-ai li i { background: rgba(255, 255, 255, 0.2); color: #fff; }
+  .hw-chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 120px; }
+  .hw-chip { padding: 10px 16px; border: 1px solid; border-radius: 12px; background: #fff; font-size: 0.88rem; font-weight: 700; animation: sfms-in 0.4s both; animation-delay: calc(var(--i) * 40ms); }
+  .hw-chip.in { border-color: #b6ecd6; color: #0b8a60; background: #effcf7; }
+  .hw-chip.out { border-color: #f8c7d1; color: #c2304e; background: #fff4f6; }
+  .hw-chip.mv { border-color: #b9d4fb; color: var(--blue2); background: #eef5ff; }
+  @media (max-width: 1020px) {
+    .hw-jr { grid-template-columns: 1fr; }
+    .hw-panel { position: relative; top: 0; min-height: 0; }
+    .hw-step.on { translate: 0; }
+  }
+  @media (max-width: 640px) {
+    .hw-paths { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hw-step::after { width: 100%; }
+  }
+}
+
+@keyframes sfms-in { from { opacity: 0; translate: 0 14px; } }
+@keyframes sfms-fill { to { width: 100%; } }

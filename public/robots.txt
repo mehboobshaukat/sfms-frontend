@@ -1,0 +1,31 @@
+# SFMS — Self Finance Management System
+# The marketing pages (/, /about, /contact, /login, /register) are public
+# and indexable. Everything under the authenticated app is private,
+# per-user data behind a login wall — blocked here AND carries a noindex
+# meta tag at runtime (see src/components/layout/AppLayout.jsx).
+
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /contact
+Allow: /login
+Allow: /register
+
+Disallow: /dashboard
+Disallow: /transactions
+Disallow: /accounts
+Disallow: /loans
+Disallow: /credit-purchases
+Disallow: /budgets
+Disallow: /goals
+Disallow: /analytics
+Disallow: /reports
+Disallow: /history
+Disallow: /ai-assistant
+Disallow: /profile
+Disallow: /settings
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+
+Sitemap: https://sfms.app/sitemap.xml

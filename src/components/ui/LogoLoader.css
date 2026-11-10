@@ -1,0 +1,22 @@
+/* Branded loader: SFMS logo with a glowing ring, a spinning arc and a sweeping bar. Self-contained. */
+.sfms-ll { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-height: 60vh; padding: 32px; text-align: center; opacity: 0; animation: sfms-ll-in 0.4s 0.25s ease forwards; }
+.sfms-ll-full { position: fixed; inset: 0; z-index: 9999; min-height: 100vh; background: radial-gradient(circle at 20% 15%, rgba(23, 200, 242, 0.18), transparent 45%), radial-gradient(circle at 85% 85%, rgba(21, 101, 255, 0.14), transparent 45%), #f4f9ff; }
+.sfms-ll-mark { position: relative; display: grid; place-items: center; width: 132px; height: 132px; }
+.sfms-ll-mark img { position: relative; z-index: 1; width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 10px 22px rgba(21, 101, 255, 0.4)); animation: sfms-ll-float 2.4s ease-in-out infinite; }
+.sfms-ll-ring { position: absolute; inset: 14px; border-radius: 50%; border: 2px solid rgba(23, 200, 242, 0.55); animation: sfms-ll-ping 2.2s ease-out infinite; }
+.sfms-ll-ring.b { animation-delay: 1.1s; }
+.sfms-ll-arc { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(21, 101, 255, 0.12); border-top-color: #1565ff; border-right-color: #17c8f2; animation: sfms-ll-spin 1.1s linear infinite; }
+.sfms-ll-label { margin: 0; font-family: "Plus Jakarta Sans", Inter, "Segoe UI", system-ui, sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; color: #1b2f57; }
+.sfms-ll-bar { position: relative; width: 150px; height: 4px; overflow: hidden; border-radius: 99px; background: rgba(21, 101, 255, 0.14); }
+.sfms-ll-bar i { position: absolute; top: 0; bottom: 0; left: 0; width: 40%; border-radius: 99px; background: linear-gradient(90deg, #17c8f2, #1565ff); animation: sfms-ll-sweep 1.3s ease-in-out infinite; }
+
+@keyframes sfms-ll-in { to { opacity: 1; } }
+@keyframes sfms-ll-float { 50% { translate: 0 -6px; } }
+@keyframes sfms-ll-ping { from { scale: 0.85; opacity: 0.8; } to { scale: 1.45; opacity: 0; } }
+@keyframes sfms-ll-spin { to { rotate: 360deg; } }
+@keyframes sfms-ll-sweep { 0% { left: -40%; } 100% { left: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .sfms-ll { animation: none; opacity: 1; }
+  .sfms-ll-mark img, .sfms-ll-ring, .sfms-ll-arc, .sfms-ll-bar i { animation: none; }
+  .sfms-ll-ring { display: none; } .sfms-ll-bar i { left: 0; width: 100%; }
+}

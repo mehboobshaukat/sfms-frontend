@@ -1,0 +1,114 @@
+/* SFMS "What happens when you press save" stage: Command panel -> SFMS Engine -> Updated Records. Used by HowItWorks. */
+.sfms-home {
+  .eg-stage { position: relative; display: grid; grid-template-columns: minmax(236px, 0.72fr) minmax(0, 1.9fr) minmax(290px, 0.98fr); gap: 6px; align-items: center; max-width: 1260px; margin: 0 auto; }
+  .eg-stage > section, .eg-core { position: relative; z-index: 1; }
+  .eg-links { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+
+  /* glass panels, with the same micro-chip personality as the processor */
+  .eg-panel { padding: 18px; border: 1px solid rgba(255, 255, 255, 0.95); border-radius: 22px; background: linear-gradient(150deg, rgba(255, 255, 255, 0.92), rgba(231, 242, 255, 0.7)); box-shadow: 0 26px 54px rgba(30, 90, 200, 0.14), inset 0 0 0 1px rgba(150, 195, 255, 0.4); backdrop-filter: blur(10px); }
+  .eg-panel > h3 { margin: 0 0 12px; color: #0a1f4d; font-family: var(--display, inherit); font-size: 1.12rem; letter-spacing: -0.02em; }
+  .eg-tile { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 11px; }
+  .eg-tile.rd { background: #fde7ec; color: #e11d48; } .eg-tile.bl { background: #e1edff; color: #1565ff; } .eg-tile.gn { background: #dcf8ee; color: #0b8a60; }
+
+  /* command list */
+  .eg-cmds { display: grid; gap: 6px; }
+  .eg-c { position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 12px; border: 1px solid transparent; border-radius: 14px; background: transparent; text-align: left; transition: background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.3s; }
+  .eg-c b { font-size: 0.94rem; color: #1b2f5c; }
+  .eg-c:hover { background: rgba(255, 255, 255, 0.7); transform: translateX(3px); }
+  .eg-c.on { border-color: #b9d4fb; background: #fff; box-shadow: 0 10px 26px rgba(21, 101, 255, 0.14); }
+  .eg-c.on::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: linear-gradient(180deg, var(--cyan), var(--blue)); }
+  .eg-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--cyan), var(--blue)); }
+  .eg-stage[data-run="1"] .eg-bar { animation: eg-fill var(--cycle) linear forwards; }
+  .eg-rec { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: linear-gradient(135deg, #08183b, #0e2a66); box-shadow: inset 0 0 0 1px rgba(80, 170, 255, 0.28); animation: eg-in 0.45s both; }
+  .eg-rec small { display: block; margin-bottom: 5px; color: #7fb4ff; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .eg-rec code { color: #dcecff; font: 600 0.8rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .eg-rec code i { margin-right: 6px; color: var(--cyan); font-style: normal; }
+  .eg-rec code::after { content: ""; display: inline-block; width: 6px; height: 0.95em; margin-left: 3px; vertical-align: -2px; background: var(--cyan); animation: eg-caret 1s steps(1) infinite; }
+
+  /* engine column */
+  .eg-core { display: grid; justify-items: center; gap: 0; }
+  .eg-engine-wrap { width: 100%; aspect-ratio: 672 / 508; }
+  .eg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .eg-cap { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin-top: -26px; padding: 9px 16px; border: 1px solid #cfe0fb; border-radius: 99px; background: rgba(255, 255, 255, 0.92); box-shadow: 0 10px 26px rgba(21, 101, 255, 0.14); color: #0a2c6e; font-size: 0.86rem; font-weight: 700; animation: eg-in 0.35s both; }
+  .eg-cap i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 0 rgba(23, 200, 242, 0.6); animation: eg-live 1.4s ease-out infinite; }
+  .eg-cap.ok i { background: var(--green); }
+  .eg-cap small { padding: 2px 8px; border-radius: 99px; background: #e6f1ff; color: var(--blue); font-size: 0.72rem; font-weight: 800; }
+
+  /* processor states (the board itself is drawn in SfmsEngine.jsx) */
+  .eg-t { fill: #fff; font-family: var(--display, inherit); font-weight: 700; }
+  .eg-t.sub { fill: #ffe1ad; font-weight: 600; }
+  .eg-word { font-family: var(--display, inherit); font-weight: 800; letter-spacing: -0.4px; }
+  .eg-word.sub { font-weight: 700; letter-spacing: 4.5px; }
+  .eg-chip { transition: translate 0.4s cubic-bezier(0.3, 1.5, 0.5, 1); }
+  .eg-chip.on { translate: 0 -5px; }
+  .eg-under { opacity: 0.22; transition: opacity 0.4s; }
+  .eg-chip.on .eg-under { opacity: 0.95; }
+  .eg-rim { opacity: 0.8; transition: opacity 0.3s; }
+  .eg-chip.on .eg-rim { opacity: 1; filter: drop-shadow(0 0 3px var(--c)); }
+  .eg-led { animation: eg-blink 2.2s ease-in-out var(--d, 0s) infinite; }
+  .eg-line { fill: none; stroke: var(--c); stroke-opacity: 0.45; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; transition: stroke-opacity 0.3s; }
+  .eg-head { fill: var(--c); fill-opacity: 0.55; transition: fill-opacity 0.3s; }
+  .eg-path.trail .eg-line { stroke-opacity: 0.7; } .eg-path.trail .eg-head { fill-opacity: 0.85; }
+  .eg-path.on .eg-line { stroke-opacity: 1; filter: drop-shadow(0 0 3px var(--c)); } .eg-path.on .eg-head { fill-opacity: 1; filter: drop-shadow(0 0 3px var(--c)); }
+  .eg-comet { fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-dasharray: 0.3 2; stroke-dashoffset: 0.3; opacity: 0; filter: drop-shadow(0 0 4px var(--c)) drop-shadow(0 0 8px var(--c)); animation: eg-comet var(--t, 0.5s) cubic-bezier(0.45, 0, 0.3, 1) var(--d, 0s) both; }
+  .eg-rimflow { stroke-dasharray: 9 91; animation: eg-flow 4.5s linear infinite; }
+  .eg-strip { animation: eg-strip 3.4s ease-in-out infinite; }
+  .eg-buf rect:first-child { transition: fill 0.3s, stroke 0.3s; }
+  .eg-buf.on rect:first-child { fill: #0b2a6e; stroke: #bff3ff; filter: drop-shadow(0 0 4px #38bdf8); }
+  .eg-pkt { fill: #38bdf8; animation: eg-blink 1.4s ease-in-out var(--d) infinite; }
+  .eg-buf.on .eg-pkt { fill: #fff; }
+
+  /* streams in and out of the processor */
+  .eg-s-glow { fill: none; stroke: rgba(23, 200, 242, 0.25); stroke-width: 12; stroke-linecap: round; filter: blur(5px); }
+  .eg-s-base { fill: none; stroke: rgba(47, 155, 255, 0.5); stroke-width: 7; stroke-linecap: round; }
+  .eg-s-flow { fill: none; stroke: #d5f7ff; stroke-width: 7; stroke-dasharray: 3 14; animation: eg-stream 1.1s linear infinite; opacity: 0.7; }
+  .eg-s-head { fill: #bff3ff; filter: drop-shadow(0 0 5px #17c8f2); }
+  .eg-stream.hot .eg-s-glow { stroke: rgba(23, 200, 242, 0.6); stroke-width: 15; }
+  .eg-stream.hot .eg-s-base { stroke: #2f9bff; }
+  .eg-stream.hot .eg-s-flow { opacity: 1; animation-duration: 0.5s; }
+  .eg-o-line { fill: none; stroke: var(--c); stroke-opacity: 0.35; stroke-width: 2.2; stroke-linecap: round; transition: stroke-opacity 0.4s; }
+  .eg-o-head { fill: var(--c); fill-opacity: 0.5; transition: fill-opacity 0.4s; }
+  .eg-o.lit .eg-o-line { stroke-opacity: 1; filter: drop-shadow(0 0 4px var(--c)); } .eg-o.lit .eg-o-head { fill-opacity: 1; filter: drop-shadow(0 0 4px var(--c)); }
+  .eg-o-comet { fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-dasharray: 0.16 2; stroke-dashoffset: 0.16; opacity: 0; filter: drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 9px var(--c)); animation: eg-comet 0.7s cubic-bezier(0.45, 0, 0.3, 1) var(--d, 0s) both; }
+
+  /* Updated Records: cards styled like small chips */
+  .eg-recs { display: grid; gap: 11px; }
+  .eg-rc { position: relative; display: flex; align-items: center; gap: 11px; padding: 12px 14px 12px 12px; border: 1px solid color-mix(in srgb, var(--c) 34%, #fff); border-radius: 15px; background: linear-gradient(135deg, #fff, color-mix(in srgb, var(--c) 7%, #fff)); box-shadow: 0 10px 24px color-mix(in srgb, var(--c) 14%, transparent); font-size: 0.9rem; transition: opacity 0.5s, translate 0.55s cubic-bezier(0.3, 1.3, 0.5, 1), scale 0.55s cubic-bezier(0.3, 1.3, 0.5, 1), border-color 0.4s; transition-delay: calc(var(--i) * 150ms); }
+  .eg-rc::before { content: ""; position: absolute; left: -5px; top: 11px; bottom: 11px; width: 4px; border-radius: 2px; background: repeating-linear-gradient(180deg, var(--c) 0 5px, transparent 5px 9px); opacity: 0.85; }
+  .eg-rc::after { content: ""; position: absolute; right: 10px; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--c); opacity: 0.8; animation: eg-blink 2.2s ease-in-out infinite; }
+  .eg-ri { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 11px; background: linear-gradient(135deg, color-mix(in srgb, var(--c) 78%, #fff), var(--c)); color: #fff; box-shadow: 0 6px 14px color-mix(in srgb, var(--c) 35%, transparent); }
+  .eg-rl { color: #34466b; font-weight: 600; }
+  .eg-rc b { margin-left: auto; padding-right: 6px; font-size: 1rem; white-space: nowrap; }
+  .eg-rc.dn b { color: var(--red); } .eg-rc.up b { color: var(--green); } .eg-rc.nu b { color: #0a2c6e; }
+  .eg-ok { position: absolute; top: -7px; right: -6px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: var(--green); color: #fff; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); font-style: normal; scale: 0; transition: scale 0.45s cubic-bezier(0.3, 1.8, 0.5, 1); transition-delay: calc(var(--i) * 150ms + 0.35s); }
+  .eg-rc:not(.show) { opacity: 0.55; translate: -14px 0; scale: 0.96; border-style: dashed; background: rgba(255, 255, 255, 0.4); box-shadow: none; }
+  .eg-rc:not(.show) > * { opacity: 0; }
+  .eg-rc > * { transition: opacity 0.4s; transition-delay: calc(var(--i) * 150ms + 0.12s); }
+  .eg-rc.show .eg-ok { scale: 1; }
+
+  @media (max-width: 1020px) {
+    .eg-stage { grid-template-columns: minmax(0, 1fr); gap: 4px; max-width: 580px; }
+    .eg-engine-wrap { width: min(100%, 560px); }
+    .eg-cmd { margin-bottom: 36px; }
+    .eg-rec-p { margin-top: 30px; padding-right: 34px; }
+    .eg-cap { margin-top: -8px; }
+  }
+  @media (max-width: 640px) {
+    .eg-engine-wrap { width: 112%; margin-inline: -6%; }
+    .eg-cap { font-size: 0.8rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .eg-stage *, .eg-stage *::before, .eg-stage *::after { animation: none !important; transition: none !important; }
+    .eg-comet, .eg-o-comet { display: none; }
+  }
+}
+
+@keyframes eg-comet { 0% { stroke-dashoffset: 0.3; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { stroke-dashoffset: -1; opacity: 0; } }
+@keyframes eg-stream { to { stroke-dashoffset: -17; } }
+@keyframes eg-flow { to { stroke-dashoffset: -100; } }
+@keyframes eg-strip { 50% { opacity: 0.55; } }
+@keyframes eg-blink { 50% { opacity: 0.25; } }
+@keyframes eg-live { 0% { box-shadow: 0 0 0 0 rgba(23, 200, 242, 0.55); } 100% { box-shadow: 0 0 0 9px rgba(23, 200, 242, 0); } }
+@keyframes eg-fill { to { width: 100%; } }
+@keyframes eg-caret { 50% { opacity: 0; } }
+@keyframes eg-in { from { opacity: 0; translate: 0 10px; } }

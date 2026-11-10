@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+docs/
+
+# Build output
+dist/
+dist-ssr/
+
+# Environment files (keep .env.example committed, it documents the variables)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Tooling caches and test output
+.vite/
+.eslintcache
+coverage/
+*.local
+*.tsbuildinfo
+
+# Deployment tooling
+.vercel/
+.netlify/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp

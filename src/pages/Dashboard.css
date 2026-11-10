@@ -1,0 +1,13 @@
+/* Dashboard: dark hero (same family as the public dark sections) and the budget ring. */
+.sfms-hero { position: relative; isolation: isolate; overflow: hidden; color: #fff; background: linear-gradient(135deg, #061330 0%, #0a2455 55%, #0b3a8f 100%); box-shadow: 0 30px 70px rgba(10, 40, 110, 0.28); animation: sfms-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.sfms-hero::after { content: ""; position: absolute; right: -90px; top: -110px; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(23, 200, 242, 0.28), transparent 68%); pointer-events: none; z-index: 0; }
+.sfms-hero .grid-bg { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.sfms-hero-in { position: relative; z-index: 1; }
+.sfms-hero-stat { padding: 12px 14px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 16px; background: rgba(255, 255, 255, 0.07); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background 0.25s, transform 0.25s; }
+.sfms-hero-stat:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-2px); }
+
+.sfms-ring { --c: #1565ff; position: relative; display: grid; place-items: center; flex: none; width: 92px; height: 92px; border-radius: 50%; background: conic-gradient(var(--c) calc(var(--p, 0) * 1%), #e8eef9 0); }
+.sfms-ring::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: #fff; }
+.sfms-ring b { position: relative; font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif; font-size: 1.05rem; font-weight: 800; color: #0b1d45; }
+.sfms-ring.warn { --c: #f5a524; } .sfms-ring.bad { --c: #e5304f; }
+@media (prefers-reduced-motion: reduce) { .sfms-hero { animation: none; } }

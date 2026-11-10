@@ -1,0 +1,19 @@
+/* Branded spinner (logo + ring). Colours are fixed brand blue/cyan, never green. */
+.sfms-spin { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 44px 16px; text-align: center; animation: sfms-spin-in 0.35s 0.12s ease backwards; }
+.sfms-spin.is-sm { padding: 20px 12px; gap: 8px; }
+.sfms-spin-mark { position: relative; display: grid; place-items: center; width: 72px; height: 72px; }
+.sfms-spin.is-sm .sfms-spin-mark { width: 52px; height: 52px; }
+.sfms-spin-mark img { position: relative; width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(21, 101, 255, 0.35)); animation: sfms-spin-pulse 1.8s ease-in-out infinite; }
+.sfms-spin.is-sm .sfms-spin-mark img { width: 28px; height: 28px; }
+.sfms-spin-ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(21, 101, 255, 0.12); border-top-color: #1565ff; border-right-color: #17c8f2; animation: sfms-spin-rot 1s linear infinite; }
+.sfms-spin-label { font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif; font-size: 0.85rem; font-weight: 700; color: #5d6f90; }
+
+/* inside buttons: a small white chip carrying the logo, with its own ring, readable on any button colour */
+.sfms-spin-xs { position: relative; display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(21, 101, 255, 0.18); }
+.sfms-spin-xs img { width: 12px; height: 12px; object-fit: contain; animation: sfms-spin-pulse 1.2s ease-in-out infinite; }
+.sfms-spin-xs::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid transparent; border-top-color: #17c8f2; border-right-color: #1565ff; animation: sfms-spin-rot 0.8s linear infinite; }
+
+@keyframes sfms-spin-rot { to { rotate: 360deg; } }
+@keyframes sfms-spin-pulse { 50% { scale: 0.88; opacity: 0.85; } }
+@keyframes sfms-spin-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sfms-spin, .sfms-spin-mark img, .sfms-spin-ring, .sfms-spin-xs img, .sfms-spin-xs::after { animation: none; } }

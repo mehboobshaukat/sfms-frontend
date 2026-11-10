@@ -1,0 +1,1369 @@
+diff -ruN frontend_src_before_admin/App.jsx "/home/claude/sfms-frontend ac/src/App.jsx"
+--- frontend_src_before_admin/App.jsx	2026-11-05 01:45:24.287801998 +0000
++++ "/home/claude/sfms-frontend ac/src/App.jsx"	2026-11-05 01:45:24.338871324 +0000
+@@ -8,6 +8,8 @@
+ import ProtectedRoute from "./components/layout/ProtectedRoute";
+ import PublicOnlyRoute from "./components/layout/PublicOnlyRoute";
+ import SettingsLayout from "./components/layout/SettingsLayout";
++import AdminRoute from "./components/layout/AdminRoute";
++import AdminLayout from "./components/layout/AdminLayout";
+ 
+ const Home = lazy(() => import("./pages/public/Home"));
+ const About = lazy(() => import("./pages/public/About"));
+@@ -36,6 +38,10 @@
+ const AiAssistant = lazy(() => import("./pages/AiAssistant"));
+ const Profile = lazy(() => import("./pages/Profile"));
+ 
++const AdminMessages = lazy(() => import("./pages/admin/Messages"));
++const AdminUsers = lazy(() => import("./pages/admin/Users"));
++const AdminAdmins = lazy(() => import("./pages/admin/Admins"));
++
+ const TransactionTypes = lazy(() => import("./pages/settings/TransactionTypes"));
+ const Categories = lazy(() => import("./pages/settings/Categories"));
+ const Groups = lazy(() => import("./pages/settings/Groups"));
+@@ -106,6 +112,23 @@
+         </Route>
+       </Route>
+ 
++      {/* Admin panel: separate layout + guard, lazy-loaded so regular users never download it */}
++      <Route
++        path="/admin"
++        element={
++          <ProtectedRoute>
++            <AdminRoute>
++              <AdminLayout />
++            </AdminRoute>
++          </ProtectedRoute>
++        }
++      >
++        <Route index element={<Navigate to="messages" replace />} />
++        <Route path="messages/:slug?" element={<AdminMessages />} />
++        <Route path="users" element={<AdminUsers />} />
++        <Route path="admins" element={<AdminAdmins />} />
++      </Route>
++
+       <Route path="*" element={<Navigate to="/" replace />} />
+     </Routes>
+     </Suspense>
+diff -ruN frontend_src_before_admin/api/admin.js "/home/claude/sfms-frontend ac/src/api/admin.js"
+--- frontend_src_before_admin/api/admin.js	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/api/admin.js"	2026-11-05 01:45:24.308725985 +0000
+@@ -0,0 +1,33 @@
++import { apiClient } from "./client";
++
++const data = (res) => res.data;
++const enc = encodeURIComponent;
++
++// Admin layer: everything under /admin/* (the backend checks the role on every call).
++export const adminApi = {
++  me: () => apiClient.get("/admin/me").then(data),
++
++  // ---- contact messages ----
++  messageStats: () => apiClient.get("/admin/messages/stats").then(data),
++  listMessages: (params) => apiClient.get("/admin/messages", { params }).then(data),
++  getMessage: (slug) => apiClient.get(`/admin/messages/${enc(slug)}`).then(data),
++  updateMessage: (slug, patch) => apiClient.patch(`/admin/messages/${enc(slug)}`, patch).then(data),
++  bulkMessages: (slugs, action) => apiClient.post("/admin/messages/bulk", { slugs, action }).then(data),
++  trashMessage: (slug) => apiClient.delete(`/admin/messages/${enc(slug)}`),
++  restoreMessage: (slug) => apiClient.post(`/admin/messages/${enc(slug)}/restore`).then(data),
++  replyToMessage: (slug, payload) => apiClient.post(`/admin/messages/${enc(slug)}/replies`, payload).then(data),
++
++  // ---- users ----
++  listUsers: (params) => apiClient.get("/admin/users", { params }).then(data),
++  getUser: (username) => apiClient.get(`/admin/users/${enc(username)}`).then(data),
++  blockUser: (username, reason) => apiClient.post(`/admin/users/${enc(username)}/block`, { reason }).then(data),
++  unblockUser: (username) => apiClient.post(`/admin/users/${enc(username)}/unblock`).then(data),
++  unlockUser: (username) => apiClient.post(`/admin/users/${enc(username)}/unlock`).then(data),
++  revokeSessions: (username) => apiClient.post(`/admin/users/${enc(username)}/revoke-sessions`).then(data),
++  resendVerification: (username) => apiClient.post(`/admin/users/${enc(username)}/resend-verification`).then(data),
++
++  // ---- admins (super admin only) ----
++  listAdmins: () => apiClient.get("/admin/admins").then(data),
++  promoteAdmin: (username, password) => apiClient.post("/admin/admins", { username, password }).then(data),
++  removeAdmin: (username, password) => apiClient.post(`/admin/admins/${enc(username)}/remove`, { password }).then(data),
++};
+diff -ruN frontend_src_before_admin/api/public.js "/home/claude/sfms-frontend ac/src/api/public.js"
+--- frontend_src_before_admin/api/public.js	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/api/public.js"	2026-11-05 01:45:24.309333866 +0000
+@@ -0,0 +1,6 @@
++import { apiClient } from "./client";
++
++export const publicApi = {
++  /** Public contact form -> admin inbox. Always answers a generic 202. */
++  submitContact: (payload) => apiClient.post("/public/contact", payload).then((r) => r.data),
++};
+diff -ruN frontend_src_before_admin/components/layout/AdminLayout.jsx "/home/claude/sfms-frontend ac/src/components/layout/AdminLayout.jsx"
+--- frontend_src_before_admin/components/layout/AdminLayout.jsx	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/components/layout/AdminLayout.jsx"	2026-11-05 01:45:24.331388819 +0000
+@@ -0,0 +1,99 @@
++import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
++import { Outlet, useLocation, useNavigate } from "react-router-dom";
++import toast from "react-hot-toast";
++import { adminApi } from "../../api/admin";
++import { apiErrorMessage } from "../../api/client";
++import { useAuth } from "../../context/AuthContext";
++import AdminSidebar from "./AdminSidebar";
++import Topbar from "./Topbar";
++import Seo from "../Seo";
++import LogoLoader from "../ui/LogoLoader";
++import "./AppShell.css";
++
++const AdminContext = createContext(null);
++
++/** `me` = GET /admin/me (role + capabilities), `stats` = inbox counters, `refreshStats()` after any message change. */
++export function useAdmin() {
++  const ctx = useContext(AdminContext);
++  if (!ctx) throw new Error("useAdmin must be used inside AdminLayout");
++  return ctx;
++}
++
++function titleFor(pathname) {
++  if (pathname.startsWith("/admin/users")) return "Admin · Users";
++  if (pathname.startsWith("/admin/admins")) return "Admin · Admins";
++  return "Admin · Messages";
++}
++
++export default function AdminLayout() {
++  const { refreshProfile } = useAuth();
++  const navigate = useNavigate();
++  const location = useLocation();
++  const [mobileOpen, setMobileOpen] = useState(false);
++  const [me, setMe] = useState(null);
++  const [stats, setStats] = useState(null);
++
++  const refreshStats = useCallback(async () => {
++    try {
++      setStats(await adminApi.messageStats());
++    } catch {
++      /* the badge is non-essential */
++    }
++  }, []);
++
++  useEffect(() => {
++    let alive = true;
++    (async () => {
++      try {
++        const data = await adminApi.me();
++        if (!alive) return;
++        setMe(data);
++        refreshStats();
++      } catch (err) {
++        if (!alive) return;
++        if ([401, 403].includes(err?.response?.status)) {
++          toast.error("You don't have admin access.");
++          await refreshProfile().catch(() => {});
++          navigate("/dashboard", { replace: true });
++        } else {
++          toast.error(apiErrorMessage(err));
++        }
++      }
++    })();
++    return () => { alive = false; };
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, []);
++
++  const value = useMemo(() => ({ me, stats, refreshStats }), [me, stats, refreshStats]);
++  const pageTitle = titleFor(location.pathname);
++
++  if (!me) return <LogoLoader fullscreen label="Opening admin panel…" />;
++
++  return (
++    <AdminContext.Provider value={value}>
++      <div className="min-h-screen bg-bg lg:flex">
++        <Seo title={pageTitle} noindex />
++
++        <aside className="sfms-side hidden lg:block sticky top-0 h-screen w-[248px] shrink-0 z-30">
++          <AdminSidebar me={me} unread={stats?.unread || 0} />
++        </aside>
++
++        {mobileOpen && (
++          <div className="fixed inset-0 z-50 lg:hidden">
++            <div className="absolute inset-0 bg-[#061330]/55 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
++            <div className="sfms-side absolute left-0 top-0 h-full w-[280px] shadow-float">
++              <AdminSidebar me={me} unread={stats?.unread || 0} onNavigate={() => setMobileOpen(false)} />
++            </div>
++          </div>
++        )}
++
++        <div className="min-w-0 flex-1">
++          <Topbar title={pageTitle} onMenuClick={() => setMobileOpen(true)} />
++          <main className="sfms-main relative mx-auto w-full max-w-[1580px] px-4 py-6 sm:px-6 sm:py-7 xl:px-7">
++            <div key={location.pathname.split("/").slice(0, 3).join("/")} className="sfms-page"><Outlet /></div>
++          </main>
++        </div>
++      </div>
++    </AdminContext.Provider>
++  );
++}
+diff -ruN frontend_src_before_admin/components/layout/AdminRoute.jsx "/home/claude/sfms-frontend ac/src/components/layout/AdminRoute.jsx"
+--- frontend_src_before_admin/components/layout/AdminRoute.jsx	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/components/layout/AdminRoute.jsx"	2026-11-05 01:45:24.330136502 +0000
+@@ -0,0 +1,17 @@
++import React from "react";
++import { Navigate } from "react-router-dom";
++import { useAuth } from "../../context/AuthContext";
++import { isAdminRole } from "../../lib/roles";
++
++/** Keeps non-admins out of /admin/*. UI convenience only - every /admin API call is checked again by the backend. */
++export default function AdminRoute({ children }) {
++  const { user } = useAuth();
++  if (!isAdminRole(user?.role)) return <Navigate to="/dashboard" replace />;
++  return children;
++}
++
++/** For pages only the super admin may open (e.g. /admin/admins). */
++export function SuperAdminOnly({ me, children }) {
++  if (!me?.capabilities?.manage_admins) return <Navigate to="/admin/messages" replace />;
++  return children;
++}
+diff -ruN frontend_src_before_admin/components/layout/AdminSidebar.jsx "/home/claude/sfms-frontend ac/src/components/layout/AdminSidebar.jsx"
+--- frontend_src_before_admin/components/layout/AdminSidebar.jsx	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/components/layout/AdminSidebar.jsx"	2026-11-05 01:45:24.330763903 +0000
+@@ -0,0 +1,74 @@
++import React from "react";
++import { NavLink, Link } from "react-router-dom";
++import { useAuth } from "../../context/AuthContext";
++import { backendAssetUrl } from "../../api/client";
++import { roleLabel } from "../../lib/roles";
++import Icon from "../ui/Icon";
++import logo from "../../pages/assets/SFMS_logo_transparent.png";
++import wordmark from "../../pages/assets/sfms-wordmark-light.png";
++import "./AppShell.css";
++
++const navItemClass = ({ isActive }) => "sfms-nav" + (isActive ? " is-active" : "");
++
++function initials(value) {
++  if (!value) return "A";
++  return value.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "A";
++}
++
++export default function AdminSidebar({ me, unread = 0, onNavigate }) {
++  const { user } = useAuth();
++  const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() || user?.username || "Admin";
++  const avatar = backendAssetUrl(user?.profile_image_url);
++
++  const items = [
++    { to: "/admin/messages", label: "Messages", icon: "mail", badge: unread },
++    { to: "/admin/users", label: "Users", icon: "users" },
++    ...(me?.capabilities?.manage_admins ? [{ to: "/admin/admins", label: "Admins", icon: "shield" }] : []),
++  ];
++
++  return (
++    <div className="flex h-full min-h-0 flex-col px-4 py-5">
++      <Link to="/admin/messages" onClick={onNavigate} aria-label="SFMS admin" className="sfms-brand mb-6 flex shrink-0 items-center gap-3 px-2 no-underline">
++        <img className="sfms-brand-logo h-11 w-11 object-contain" src={logo} alt="" style={{ filter: "drop-shadow(0 6px 14px rgba(23,200,242,.45))" }} />
++        <div className="min-w-0">
++          <img className="h-[22px] w-auto" src={wordmark} alt="SFMS" />
++          <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#cfe0ff]">Admin</span>
++        </div>
++      </Link>
++
++      <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#7e95c4]">Manage</p>
++      <nav className="sfms-side-nav -mr-1 min-h-0 flex-1 overflow-y-auto pr-1" aria-label="Admin navigation">
++        <ul className="sfms-nav-list m-0 flex list-none flex-col gap-[3px] p-0">
++          {items.map((item) => (
++            <li key={item.to}>
++              <NavLink to={item.to} className={navItemClass} onClick={onNavigate}>
++                <Icon name={item.icon} size={19} strokeWidth={1.8} />
++                <span className="truncate">{item.label}</span>
++                {item.badge > 0 && (
++                  <span className="ml-auto rounded-full bg-[#17c8f2] px-2 py-0.5 text-[10px] font-extrabold text-[#061330]">{item.badge > 99 ? "99+" : item.badge}</span>
++                )}
++              </NavLink>
++            </li>
++          ))}
++        </ul>
++      </nav>
++
++      <Link to="/dashboard" onClick={onNavigate} className="sfms-nav mt-3 shrink-0 no-underline">
++        <Icon name="arrowLeft" size={19} strokeWidth={1.8} />
++        <span className="truncate">Back to my SFMS</span>
++      </Link>
++
++      <div className="sfms-profile mt-3 shrink-0 overflow-hidden rounded-2xl">
++        <div className="flex items-center gap-3 px-3.5 py-3.5">
++          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/10 text-sm font-bold text-white">
++            {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : initials(name)}
++          </div>
++          <div className="min-w-0 flex-1">
++            <p className="truncate text-sm font-bold text-white">{name}</p>
++            <p className="truncate text-[11px] text-[#9fb6e3]">{roleLabel(me?.role || user?.role)}</p>
++          </div>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff -ruN frontend_src_before_admin/components/layout/Sidebar.jsx "/home/claude/sfms-frontend ac/src/components/layout/Sidebar.jsx"
+--- frontend_src_before_admin/components/layout/Sidebar.jsx	2026-11-05 01:45:24.288191488 +0000
++++ "/home/claude/sfms-frontend ac/src/components/layout/Sidebar.jsx"	2026-11-05 01:45:24.338578922 +0000
+@@ -3,6 +3,7 @@
+ import { useAuth } from "../../context/AuthContext";
+ import { backendAssetUrl } from "../../api/client";
+ import Icon from "../ui/Icon";
++import { isAdminRole, roleLabel } from "../../lib/roles";
+ import logo from "../../pages/assets/SFMS_logo_transparent.png";
+ import wordmark from "../../pages/assets/sfms-wordmark-light.png";
+ import "./AppShell.css";
+@@ -64,6 +65,13 @@
+         </ul>
+       </nav>
+ 
++      {isAdminRole(user?.role) && (
++        <NavLink to="/admin/messages" onClick={onNavigate} className={navItemClass}>
++          <Icon name="shield" size={19} strokeWidth={1.8} />
++          <span className="truncate">Admin panel</span>
++        </NavLink>
++      )}
++
+       <NavLink
+         to="/profile"
+         onClick={onNavigate}
+@@ -75,7 +83,7 @@
+           </div>
+           <div className="min-w-0 flex-1">
+             <p className="truncate text-sm font-bold text-white">{name}</p>
+-            <p className="truncate text-[11px] text-[#9fb6e3]">{user?.role || user?.hierarchy || "Member"}</p>
++            <p className="truncate text-[11px] text-[#9fb6e3]">{roleLabel(user?.role)}</p>
+           </div>
+           <Icon name="chevronRight" size={15} className="shrink-0 text-[#9fb6e3]" />
+         </div>
+diff -ruN frontend_src_before_admin/components/ui/Icon.jsx "/home/claude/sfms-frontend ac/src/components/ui/Icon.jsx"
+--- frontend_src_before_admin/components/ui/Icon.jsx	2026-11-05 01:45:24.288562128 +0000
++++ "/home/claude/sfms-frontend ac/src/components/ui/Icon.jsx"	2026-11-05 01:45:24.327761657 +0000
+@@ -29,6 +29,18 @@
+   chevronRight: <path d="m9 18 6-6-6-6"/>,
+   check: <path d="m5 12 4 4L19 6"/>,
+   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></>,
++  mail: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></>,
++  users: <><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></>,
++  archive: <><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></>,
++  trash: <><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/><path d="M9 7V4h6v3"/></>,
++  shield: <><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/></>,
++  send: <><path d="M21 3 10 14"/><path d="M21 3 14.5 21l-4.5-7-7-4.5z"/></>,
++  inbox: <><path d="M3 13l3-8h12l3 8"/><path d="M3 13v6a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6h-5l-1 3h-6l-1-3z"/></>,
++  ban: <><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></>,
++  arrowLeft: <><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></>,
++  undo: <><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></>,
++  key: <><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/><path d="m16 7 3 3"/></>,
++  refresh: <><path d="M20 11a8 8 0 0 0-14.5-4"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4"/><path d="M20 20v-4h-4"/></>,
+ };
+ 
+ export default function Icon({ name, size = 20, strokeWidth = 1.8, className = "", ...props }) {
+diff -ruN frontend_src_before_admin/lib/roles.js "/home/claude/sfms-frontend ac/src/lib/roles.js"
+--- frontend_src_before_admin/lib/roles.js	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/lib/roles.js"	2026-11-05 01:45:24.308097861 +0000
+@@ -0,0 +1,28 @@
++// Role names mirror the backend (app/core/roles.py). The backend enforces every rule on
++// its own; these helpers only decide what the UI shows.
++export const ROLE_USER = "user";
++export const ROLE_ADMIN = "admin";
++export const ROLE_SUPER_ADMIN = "super_admin";
++
++export const isAdminRole = (role) => role === ROLE_ADMIN || role === ROLE_SUPER_ADMIN;
++
++export function roleLabel(role) {
++  if (role === ROLE_SUPER_ADMIN) return "Super admin";
++  if (role === ROLE_ADMIN) return "Admin";
++  return "Member";
++}
++
++/** Can `me` (from GET /admin/me) act on `target` (an AdminUserOut)? Mirrors the backend's _assert_manageable. */
++export function canManageUser(me, target) {
++  if (!me || !target) return { allowed: false, reason: "" };
++  if (target.username.toLowerCase() === me.username.toLowerCase()) {
++    return { allowed: false, reason: "You can't change your own account from the admin panel." };
++  }
++  if (target.role === ROLE_SUPER_ADMIN) {
++    return { allowed: false, reason: "The super admin account can't be modified." };
++  }
++  if (me.role !== ROLE_SUPER_ADMIN && target.role !== ROLE_USER) {
++    return { allowed: false, reason: "Only the super admin can manage other admins." };
++  }
++  return { allowed: true, reason: "" };
++}
+diff -ruN frontend_src_before_admin/pages/admin/Admins.jsx "/home/claude/sfms-frontend ac/src/pages/admin/Admins.jsx"
+--- frontend_src_before_admin/pages/admin/Admins.jsx	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/pages/admin/Admins.jsx"	2026-11-05 06:29:38.375256536 +0000
+@@ -0,0 +1,153 @@
++import React, { useCallback, useEffect, useState } from "react";
++import toast from "react-hot-toast";
++
++import { adminApi } from "../../api/admin";
++import { apiErrorMessage } from "../../api/client";
++import { useAdmin } from "../../components/layout/AdminLayout";
++import { SuperAdminOnly } from "../../components/layout/AdminRoute";
++import PageHeader from "../../components/ui/PageHeader";
++import { Card } from "../../components/ui/Card";
++import Button from "../../components/ui/Button";
++import Badge from "../../components/ui/Badge";
++import Icon from "../../components/ui/Icon";
++import Modal from "../../components/ui/Modal";
++import Spinner from "../../components/ui/Spinner";
++import Table from "../../components/ui/Table";
++import EmptyState from "../../components/ui/EmptyState";
++import { Input } from "../../components/ui/Input";
++import { formatDate } from "../../lib/formatters";
++import { ROLE_SUPER_ADMIN, roleLabel } from "../../lib/roles";
++import { USER_STATUS, StatusBadge, fullName } from "./adminUi";
++
++/** One modal for both "make admin" (needs a username) and "remove admin" (username is fixed). Both re-check the super admin's password. */
++function PasswordModal({ mode, target, onClose, onDone }) {
++  const adding = mode === "add";
++  const [username, setUsername] = useState("");
++  const [password, setPassword] = useState("");
++  const [busy, setBusy] = useState(false);
++
++  const submit = async (e) => {
++    e.preventDefault();
++    setBusy(true);
++    try {
++      if (adding) {
++        await adminApi.promoteAdmin(username.trim().replace(/^@/, ""), password);
++        toast.success("Admin added.");
++      } else {
++        await adminApi.removeAdmin(target.username, password);
++        toast.success("Admin access removed.");
++      }
++      onDone();
++      onClose();
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++      setPassword("");
++    } finally {
++      setBusy(false);
++    }
++  };
++
++  return (
++    <Modal
++      open
++      onClose={busy ? undefined : onClose}
++      title={adding ? "Add an admin" : "Remove admin access"}
++      size="sm"
++      footer={
++        <>
++          <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
++          <Button type="submit" form="admin-role-form" variant={adding ? "primary" : "danger"} loading={busy} disabled={!password || (adding && !username.trim())}>
++            {adding ? "Make admin" : "Remove access"}
++          </Button>
++        </>
++      }
++    >
++      <form id="admin-role-form" onSubmit={submit} className="space-y-4">
++        {adding ? (
++          <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="off"
++            hint="The person must already have a verified, active SFMS account." />
++        ) : (
++          <p className="text-sm text-muted">
++            <span className="font-semibold text-ink">{fullName(target)}</span> (@{target.username}) keeps their account but loses all admin access immediately.
++          </p>
++        )}
++        <Input label="Your password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password"
++          hint="Role changes need your password as confirmation." />
++      </form>
++    </Modal>
++  );
++}
++
++function AdminsContent() {
++  const { me } = useAdmin();
++  const [items, setItems] = useState([]);
++  const [loading, setLoading] = useState(true);
++  const [modal, setModal] = useState(null); // { mode: "add" } | { mode: "remove", target }
++
++  const load = useCallback(async () => {
++    setLoading(true);
++    try {
++      setItems(await adminApi.listAdmins());
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    } finally {
++      setLoading(false);
++    }
++  }, []);
++
++  useEffect(() => { load(); }, [load]);
++
++  const columns = [
++    {
++      key: "user", header: "Admin",
++      render: (u) => (
++        <div className="min-w-0">
++          <p className="truncate font-semibold text-ink">{fullName(u)}</p>
++          <p className="truncate text-xs text-muted">@{u.username}</p>
++        </div>
++      ),
++    },
++    { key: "email", header: "Email", render: (u) => <span className="break-all text-muted">{u.email}</span> },
++    { key: "role", header: "Role", render: (u) => <Badge tone={u.role === ROLE_SUPER_ADMIN ? "gold" : "primary"}>{roleLabel(u.role)}</Badge> },
++    { key: "status", header: "Status", render: (u) => <StatusBadge map={USER_STATUS} value={u.status} /> },
++    { key: "created_at", header: "Joined", render: (u) => <span className="whitespace-nowrap text-muted">{formatDate(u.created_at)}</span> },
++    {
++      key: "actions", header: "", className: "text-right",
++      render: (u) => (u.role === ROLE_SUPER_ADMIN || u.username.toLowerCase() === me.username.toLowerCase() ? null : (
++        <Button size="sm" variant="dangerGhost" onClick={() => setModal({ mode: "remove", target: u })}>Remove admin</Button>
++      )),
++    },
++  ];
++
++  return (
++    <div>
++      <PageHeader
++        eyebrow="Super admin"
++        title="Admins"
++        subtitle="Only you can add or remove admins. Admins can handle messages and block or unblock regular users, nothing else."
++        actions={<Button onClick={() => setModal({ mode: "add" })}><Icon name="plus" size={16} /> Add admin</Button>}
++      />
++
++      <Card>
++        {loading ? (
++          <div className="flex justify-center py-14"><Spinner /></div>
++        ) : items.length === 0 ? (
++          <EmptyState title="No admins yet" />
++        ) : (
++          <Table columns={columns} rows={items} rowKey="username" />
++        )}
++      </Card>
++
++      {modal && <PasswordModal mode={modal.mode} target={modal.target} onClose={() => setModal(null)} onDone={load} />}
++    </div>
++  );
++}
++
++export default function Admins() {
++  const { me } = useAdmin();
++  return (
++    <SuperAdminOnly me={me}>
++      <AdminsContent />
++    </SuperAdminOnly>
++  );
++}
+diff -ruN frontend_src_before_admin/pages/admin/Messages.jsx "/home/claude/sfms-frontend ac/src/pages/admin/Messages.jsx"
+--- frontend_src_before_admin/pages/admin/Messages.jsx	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/pages/admin/Messages.jsx"	2026-11-05 01:46:11.256189357 +0000
+@@ -0,0 +1,418 @@
++import React, { useCallback, useEffect, useMemo, useState } from "react";
++import { useNavigate, useParams } from "react-router-dom";
++import toast from "react-hot-toast";
++
++import { adminApi } from "../../api/admin";
++import { apiErrorMessage } from "../../api/client";
++import { useAdmin } from "../../components/layout/AdminLayout";
++import PageHeader from "../../components/ui/PageHeader";
++import { Card } from "../../components/ui/Card";
++import Button from "../../components/ui/Button";
++import Badge from "../../components/ui/Badge";
++import Icon from "../../components/ui/Icon";
++import Spinner from "../../components/ui/Spinner";
++import EmptyState from "../../components/ui/EmptyState";
++import ConfirmDialog from "../../components/ui/ConfirmDialog";
++import { Input, TextArea } from "../../components/ui/Input";
++import { formatDateTime } from "../../lib/formatters";
++import { FilterSelect, MESSAGE_STATUS, SearchBox, StatusBadge, shortDate, useDebounced } from "./adminUi";
++
++const PAGE_SIZE = 20;
++const VIEWS = [
++  ["inbox", "Inbox"],
++  ["archived", "Archived"],
++  ["trash", "Trash"],
++];
++const BULK_ACTIONS = {
++  inbox: [["read", "Mark read"], ["unread", "Mark unread"], ["archive", "Archive"], ["delete", "Delete"]],
++  archived: [["unarchive", "Move to inbox"], ["delete", "Delete"]],
++  trash: [["restore", "Restore"]],
++};
++// Actions after which the open message no longer belongs to the current view.
++const LEAVES_VIEW = new Set(["archive", "unarchive", "delete", "restore"]);
++
++/* ----------------------------------------------------------------- reply box */
++function ReplyBox({ message, onSent }) {
++  const [subject, setSubject] = useState(/^re:/i.test(message.subject) ? message.subject : `Re: ${message.subject}`);
++  const [body, setBody] = useState("");
++  const [resolve, setResolve] = useState(false);
++  const [sending, setSending] = useState(false);
++
++  const send = async (e) => {
++    e.preventDefault();
++    if (!body.trim()) return;
++    setSending(true);
++    try {
++      const updated = await adminApi.replyToMessage(message.slug, { subject: subject.trim() || undefined, body, mark_resolved: resolve });
++      toast.success("Reply sent by email.");
++      setBody("");
++      setResolve(false);
++      onSent(updated);
++    } catch (err) {
++      toast.error(apiErrorMessage(err, "The reply could not be sent."));
++    } finally {
++      setSending(false);
++    }
++  };
++
++  return (
++    <form onSubmit={send} className="mt-6 rounded-2xl border border-cardBorder bg-hover/30 p-4">
++      <p className="mb-3 flex items-center gap-2 font-display text-sm font-bold text-ink">
++        <Icon name="send" size={16} /> Reply to {message.name} by email
++      </p>
++      <div className="space-y-3">
++        <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
++        <TextArea label="Message" value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} rows={5} required placeholder="Write your reply…" />
++        <label className="flex items-center gap-2 text-sm text-muted">
++          <input type="checkbox" checked={resolve} onChange={(e) => setResolve(e.target.checked)} className="h-4 w-4 rounded border-cardBorder" />
++          Mark as resolved after sending
++        </label>
++        <div className="flex items-center justify-between gap-3">
++          <p className="text-xs text-subtle">Sent to {message.email}</p>
++          <Button type="submit" loading={sending} disabled={!body.trim()}>Send reply</Button>
++        </div>
++      </div>
++    </form>
++  );
++}
++
++/* -------------------------------------------------------------- message pane */
++function MessageDetail({ message, onPatch, onTrash, onRestore, onSent, onBack }) {
++  const trashed = message.is_trashed;
++  return (
++    <Card className="!p-0">
++      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-itemBorder p-5">
++        <div className="min-w-0">
++          <button onClick={onBack} className="mb-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary lg:hidden">
++            <Icon name="arrowLeft" size={14} /> Back to list
++          </button>
++          <h3 className="break-words font-display text-lg font-extrabold tracking-[-0.02em] text-ink">{message.subject}</h3>
++          <p className="mt-1 text-sm text-muted">
++            <span className="font-semibold text-ink">{message.name}</span> · {message.email}
++          </p>
++          <p className="mt-0.5 text-xs text-subtle">{formatDateTime(message.created_at)}</p>
++        </div>
++        <div className="flex flex-wrap items-center gap-2">
++          {trashed ? <Badge tone="danger">In trash</Badge> : message.is_archived && <Badge tone="neutral">Archived</Badge>}
++          <StatusBadge map={MESSAGE_STATUS} value={message.status} />
++        </div>
++      </div>
++
++      <div className="flex flex-wrap items-center gap-2 border-b border-itemBorder px-5 py-3">
++        {trashed ? (
++          <Button size="sm" variant="secondary" onClick={onRestore}><Icon name="undo" size={14} /> Restore</Button>
++        ) : (
++          <>
++            <Button size="sm" variant="secondary" onClick={() => onPatch({ is_read: !message.is_read })}>
++              <Icon name="mail" size={14} /> {message.is_read ? "Mark unread" : "Mark read"}
++            </Button>
++            <Button size="sm" variant="secondary" onClick={() => onPatch({ is_archived: !message.is_archived }, true)}>
++              <Icon name="archive" size={14} /> {message.is_archived ? "Move to inbox" : "Archive"}
++            </Button>
++            <select
++              aria-label="Status"
++              value={message.status}
++              onChange={(e) => onPatch({ status: e.target.value })}
++              className="rounded-xl border border-cardBorder bg-btnSec px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
++            >
++              {Object.entries(MESSAGE_STATUS).map(([value, { label }]) => <option key={value} value={value}>{label}</option>)}
++            </select>
++            <Button size="sm" variant="dangerGhost" className="ml-auto" onClick={onTrash}><Icon name="trash" size={14} /> Delete</Button>
++          </>
++        )}
++      </div>
++
++      <div className="p-5">
++        {/* Visitor-written text: always rendered as plain text, NEVER as HTML (no dangerouslySetInnerHTML). */}
++        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink">{message.message}</div>
++
++        {message.replies.length > 0 && (
++          <div className="mt-6 space-y-3">
++            <p className="text-xs font-bold uppercase tracking-wide text-nav">Replies ({message.replies.length})</p>
++            {message.replies.map((reply, i) => (
++              <div key={i} className="rounded-xl border border-cardBorder bg-primary-soft/40 p-3.5">
++                <p className="text-xs text-muted">
++                  <span className="font-bold text-ink">{reply.admin_name}</span> · {formatDateTime(reply.created_at)} · {reply.subject}
++                </p>
++                <div className="mt-2 whitespace-pre-wrap break-words text-sm text-ink">{reply.body}</div>
++              </div>
++            ))}
++          </div>
++        )}
++
++        {!trashed && <ReplyBox key={message.slug} message={message} onSent={onSent} />}
++      </div>
++    </Card>
++  );
++}
++
++/* ---------------------------------------------------------------------- page */
++export default function Messages() {
++  const { slug } = useParams();
++  const navigate = useNavigate();
++  const { stats, refreshStats } = useAdmin();
++
++  const [view, setView] = useState("inbox");
++  const [statusFilter, setStatusFilter] = useState("");
++  const [readFilter, setReadFilter] = useState("all");
++  const [search, setSearch] = useState("");
++  const debouncedSearch = useDebounced(search);
++  const [page, setPage] = useState(1);
++
++  const [items, setItems] = useState([]);
++  const [total, setTotal] = useState(0);
++  const [loading, setLoading] = useState(true);
++  const [selected, setSelected] = useState(() => new Set());
++
++  const [detail, setDetail] = useState(null);
++  const [detailLoading, setDetailLoading] = useState(false);
++  const [confirmDelete, setConfirmDelete] = useState(false);
++  const [deleting, setDeleting] = useState(false);
++  const [bulkBusy, setBulkBusy] = useState(false);
++
++  const loadList = useCallback(async () => {
++    setLoading(true);
++    try {
++      const result = await adminApi.listMessages({
++        view,
++        status: statusFilter || undefined,
++        is_read: readFilter === "all" ? undefined : readFilter === "read",
++        q: debouncedSearch.trim() || undefined,
++        page,
++        page_size: PAGE_SIZE,
++      });
++      setItems(result.items);
++      setTotal(result.total);
++      const lastPage = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
++      if (page > lastPage) setPage(lastPage);
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    } finally {
++      setLoading(false);
++    }
++  }, [view, statusFilter, readFilter, debouncedSearch, page]);
++
++  useEffect(() => { loadList(); }, [loadList]);
++
++  const afterChange = useCallback(() => { loadList(); refreshStats(); }, [loadList, refreshStats]);
++
++  // Open message: load it, and quietly mark it read the first time it is opened.
++  useEffect(() => {
++    if (!slug) { setDetail(null); return undefined; }
++    let alive = true;
++    setDetailLoading(true);
++    (async () => {
++      try {
++        let data = await adminApi.getMessage(slug);
++        if (!alive) return;
++        if (!data.is_read && !data.is_trashed) {
++          data = await adminApi.updateMessage(slug, { is_read: true });
++          if (!alive) return;
++          afterChange();
++        }
++        setDetail(data);
++      } catch (err) {
++        if (!alive) return;
++        toast.error(apiErrorMessage(err, "Message not found."));
++        navigate("/admin/messages", { replace: true });
++      } finally {
++        if (alive) setDetailLoading(false);
++      }
++    })();
++    return () => { alive = false; };
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [slug]);
++
++  const resetTo = (setter) => (value) => { setter(value); setPage(1); setSelected(new Set()); };
++  const changeView = (next) => { resetTo(setView)(next); if (slug) navigate("/admin/messages"); };
++  const closeDetail = () => navigate("/admin/messages");
++
++  const patchDetail = async (patch, leaves = false) => {
++    try {
++      const updated = await adminApi.updateMessage(detail.slug, patch);
++      setDetail(updated);
++      afterChange();
++      if (leaves) { toast.success(updated.is_archived ? "Archived." : "Moved to inbox."); closeDetail(); }
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    }
++  };
++
++  const trashDetail = async () => {
++    setDeleting(true);
++    try {
++      await adminApi.trashMessage(detail.slug);
++      toast.success("Moved to trash. It is deleted for good after 30 days.");
++      setConfirmDelete(false);
++      afterChange();
++      closeDetail();
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    } finally {
++      setDeleting(false);
++    }
++  };
++
++  const restoreDetail = async () => {
++    try {
++      await adminApi.restoreMessage(detail.slug);
++      toast.success("Restored.");
++      afterChange();
++      closeDetail();
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    }
++  };
++
++  const onReplySent = (updated) => { setDetail(updated); afterChange(); };
++
++  const runBulk = async (action) => {
++    setBulkBusy(true);
++    try {
++      const slugs = [...selected];
++      const { updated } = await adminApi.bulkMessages(slugs, action);
++      toast.success(`${updated} message${updated === 1 ? "" : "s"} updated.`);
++      setSelected(new Set());
++      if (slug && slugs.includes(slug) && LEAVES_VIEW.has(action)) closeDetail();
++      afterChange();
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    } finally {
++      setBulkBusy(false);
++    }
++  };
++
++  const toggle = (itemSlug) => setSelected((prev) => {
++    const next = new Set(prev);
++    if (next.has(itemSlug)) next.delete(itemSlug); else next.add(itemSlug);
++    return next;
++  });
++  const allSelected = items.length > 0 && items.every((m) => selected.has(m.slug));
++  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(items.map((m) => m.slug)));
++
++  const tabCount = useMemo(() => ({
++    inbox: stats?.unread || 0, archived: stats?.archived || 0, trash: stats?.trash || 0,
++  }), [stats]);
++  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
++
++  return (
++    <div>
++      <PageHeader
++        eyebrow="Inbox"
++        title="Contact messages"
++        subtitle="Messages sent through the public contact form. Reply by email, archive them, or move them to the trash."
++      />
++
++      <div className="grid items-start gap-4 lg:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">
++        {/* ------------ list pane ------------ */}
++        <Card className={`!p-0 ${slug ? "hidden lg:block" : "block"}`}>
++          <div className="flex gap-1 border-b border-itemBorder p-2">
++            {VIEWS.map(([value, label]) => (
++              <button
++                key={value}
++                onClick={() => changeView(value)}
++                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold transition ${view === value ? "bg-primary-soft text-primary" : "text-muted hover:bg-hover hover:text-ink"}`}
++              >
++                {label}
++                {tabCount[value] > 0 && (
++                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${value === "inbox" ? "bg-primary text-white" : "bg-hover text-muted"}`}>{tabCount[value]}</span>
++                )}
++              </button>
++            ))}
++          </div>
++
++          <div className="space-y-2.5 border-b border-itemBorder p-3">
++            <SearchBox value={search} onChange={resetTo(setSearch)} placeholder="Search name, email, subject or text" />
++            <div className="flex flex-wrap gap-2">
++              <FilterSelect label="Status" value={statusFilter} onChange={resetTo(setStatusFilter)}
++                options={[["", "Any status"], ["new", "New"], ["in_progress", "In progress"], ["resolved", "Resolved"]]} />
++              <FilterSelect label="Read state" value={readFilter} onChange={resetTo(setReadFilter)}
++                options={[["all", "Read & unread"], ["unread", "Unread only"], ["read", "Read only"]]} />
++            </div>
++          </div>
++
++          <div className="flex items-center gap-2 border-b border-itemBorder px-4 py-2 text-xs">
++            <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all on this page" className="h-4 w-4 rounded border-cardBorder" />
++            {selected.size === 0 ? (
++              <span className="text-muted">{total} message{total === 1 ? "" : "s"}</span>
++            ) : (
++              <div className="flex flex-wrap items-center gap-1.5">
++                <span className="mr-1 font-bold text-ink">{selected.size} selected</span>
++                {BULK_ACTIONS[view].map(([action, label]) => (
++                  <Button key={action} size="sm" variant={action === "delete" ? "dangerGhost" : "secondary"} loading={bulkBusy} onClick={() => runBulk(action)}>{label}</Button>
++                ))}
++              </div>
++            )}
++          </div>
++
++          {loading && items.length === 0 ? (
++            <div className="flex justify-center py-12"><Spinner /></div>
++          ) : items.length === 0 ? (
++            <EmptyState title={view === "trash" ? "Trash is empty" : "No messages here"} description={search || statusFilter || readFilter !== "all" ? "Try changing your filters." : "New messages from the contact form will show up here."} />
++          ) : (
++            <ul className="m-0 list-none p-0">
++              {items.map((m) => (
++                <li key={m.slug} className={`flex gap-3 border-b border-itemBorder px-4 py-3.5 transition-colors last:border-0 ${slug === m.slug ? "bg-primary-soft/70" : "hover:bg-hover/60"}`}>
++                  <input type="checkbox" checked={selected.has(m.slug)} onChange={() => toggle(m.slug)} aria-label={`Select message from ${m.name}`} className="mt-1 h-4 w-4 shrink-0 rounded border-cardBorder" />
++                  <button onClick={() => navigate(`/admin/messages/${m.slug}`)} className="min-w-0 flex-1 text-left">
++                    <div className="flex items-center justify-between gap-2">
++                      <span className={`truncate text-sm ${m.is_read ? "font-medium text-muted" : "font-extrabold text-ink"}`}>
++                        {!m.is_read && <span aria-label="Unread" className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />}
++                        {m.name}
++                      </span>
++                      <span className="shrink-0 text-[11px] text-subtle">{shortDate(m.created_at)}</span>
++                    </div>
++                    <p className={`truncate text-sm ${m.is_read ? "text-muted" : "font-semibold text-ink"}`}>{m.subject}</p>
++                    <p className="truncate text-xs text-subtle">{m.preview}</p>
++                    <div className="mt-1.5 flex items-center gap-2">
++                      <StatusBadge map={MESSAGE_STATUS} value={m.status} />
++                      {m.reply_count > 0 && <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted"><Icon name="send" size={12} />{m.reply_count}</span>}
++                    </div>
++                  </button>
++                </li>
++              ))}
++            </ul>
++          )}
++
++          {total > PAGE_SIZE && (
++            <div className="flex items-center justify-between gap-2 border-t border-itemBorder px-4 py-3">
++              <span className="text-xs text-muted">Page {page} of {totalPages}</span>
++              <div className="flex gap-2">
++                <Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
++                <Button size="sm" variant="secondary" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
++              </div>
++            </div>
++          )}
++        </Card>
++
++        {/* ------------ detail pane ------------ */}
++        <div className={slug ? "block" : "hidden lg:block"}>
++          {detailLoading && !detail ? (
++            <Card><div className="flex justify-center py-16"><Spinner /></div></Card>
++          ) : detail && slug ? (
++            <MessageDetail
++              message={detail}
++              onPatch={patchDetail}
++              onTrash={() => setConfirmDelete(true)}
++              onRestore={restoreDetail}
++              onSent={onReplySent}
++              onBack={closeDetail}
++            />
++          ) : (
++            <Card><EmptyState title="Select a message" description="Pick a message on the left to read it and reply." /></Card>
++          )}
++        </div>
++      </div>
++
++      <ConfirmDialog
++        open={confirmDelete}
++        onClose={() => setConfirmDelete(false)}
++        onConfirm={trashDetail}
++        loading={deleting}
++        title="Move to trash?"
++        description="The message moves to the trash and is deleted permanently after 30 days. You can restore it until then."
++        confirmLabel="Move to trash"
++      />
++    </div>
++  );
++}
+diff -ruN frontend_src_before_admin/pages/admin/Users.jsx "/home/claude/sfms-frontend ac/src/pages/admin/Users.jsx"
+--- frontend_src_before_admin/pages/admin/Users.jsx	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/pages/admin/Users.jsx"	2026-11-05 06:29:38.371256536 +0000
+@@ -0,0 +1,231 @@
++import React, { useCallback, useEffect, useState } from "react";
++import toast from "react-hot-toast";
++
++import { adminApi } from "../../api/admin";
++import { apiErrorMessage } from "../../api/client";
++import { useAdmin } from "../../components/layout/AdminLayout";
++import PageHeader from "../../components/ui/PageHeader";
++import { Card } from "../../components/ui/Card";
++import Button from "../../components/ui/Button";
++import Badge from "../../components/ui/Badge";
++import Icon from "../../components/ui/Icon";
++import Modal from "../../components/ui/Modal";
++import Spinner from "../../components/ui/Spinner";
++import Table from "../../components/ui/Table";
++import Pagination from "../../components/ui/Pagination";
++import EmptyState from "../../components/ui/EmptyState";
++import ConfirmDialog from "../../components/ui/ConfirmDialog";
++import { TextArea } from "../../components/ui/Input";
++import { formatDate, formatDateTime } from "../../lib/formatters";
++import { canManageUser, roleLabel } from "../../lib/roles";
++import { FilterSelect, SearchBox, StatusBadge, USER_STATUS, fullName, useDebounced } from "./adminUi";
++
++const ROLE_TONE = { super_admin: "gold", admin: "primary", user: "neutral" };
++
++function Field({ label, children }) {
++  return (
++    <div className="min-w-0">
++      <dt className="text-[11px] font-bold uppercase tracking-wide text-nav">{label}</dt>
++      <dd className="mt-0.5 break-words text-sm text-ink">{children || <span className="text-subtle">—</span>}</dd>
++    </div>
++  );
++}
++
++/** Per-user actions. Each one maps to one /admin/users/{username}/... endpoint. */
++function UserDetailModal({ username, me, onClose, onChanged }) {
++  const [user, setUser] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [busy, setBusy] = useState(false);
++  const [blocking, setBlocking] = useState(false);
++  const [reason, setReason] = useState("");
++  const [confirm, setConfirm] = useState(null); // "unblock" | "unlock" | "revoke" | "verify"
++
++  useEffect(() => {
++    let alive = true;
++    setLoading(true);
++    adminApi.getUser(username)
++      .then((data) => { if (alive) setUser(data); })
++      .catch((err) => { toast.error(apiErrorMessage(err)); onClose(); })
++      .finally(() => { if (alive) setLoading(false); });
++    return () => { alive = false; };
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [username]);
++
++  const run = async (fn, okMessage) => {
++    setBusy(true);
++    try {
++      const result = await fn();
++      if (result && result.username) setUser(result);
++      else setUser(await adminApi.getUser(username));
++      toast.success(okMessage);
++      setConfirm(null);
++      setBlocking(false);
++      setReason("");
++      onChanged();
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    } finally {
++      setBusy(false);
++    }
++  };
++
++  const check = user ? canManageUser(me, user) : { allowed: false, reason: "" };
++  const confirmCopy = {
++    unblock: { title: "Unblock this account?", text: "The user will be able to sign in again.", label: "Unblock", action: () => run(() => adminApi.unblockUser(username), "Account unblocked.") },
++    unlock: { title: "Clear the login lock?", text: "Removes the temporary lock caused by failed sign-in attempts.", label: "Clear lock", action: () => run(() => adminApi.unlockUser(username), "Login lock cleared.") },
++    revoke: { title: "Sign this user out everywhere?", text: "All their sessions end. They can sign in again with their password.", label: "Sign out everywhere", action: () => run(async () => { const r = await adminApi.revokeSessions(username); toast(`${r.revoked} session(s) ended.`); return null; }, "Done.") },
++    verify: { title: "Resend the verification email?", text: "A new verification link is emailed to the user.", label: "Send email", action: () => run(() => adminApi.resendVerification(username).then(() => null), "Verification email sent.") },
++  }[confirm];
++
++  return (
++    <>
++      <Modal open onClose={onClose} title="User details" size="lg">
++        {loading || !user ? (
++          <div className="flex justify-center py-12"><Spinner /></div>
++        ) : (
++          <div>
++            <div className="mb-5 flex flex-wrap items-center gap-2">
++              <h4 className="mr-1 font-display text-lg font-extrabold text-ink">{fullName(user)}</h4>
++              <Badge tone={ROLE_TONE[user.role] || "neutral"}>{roleLabel(user.role)}</Badge>
++              <StatusBadge map={USER_STATUS} value={user.status} />
++            </div>
++
++            <dl className="grid gap-4 sm:grid-cols-2">
++              <Field label="Username">@{user.username}</Field>
++              <Field label="Email">{user.email}{user.email_confirmed ? "" : " (not verified)"}</Field>
++              <Field label="Country">{user.country_name || user.country}</Field>
++              <Field label="Joined">{formatDate(user.created_at)}</Field>
++              {user.is_blocked && <Field label="Blocked since">{formatDateTime(user.blocked_at)}</Field>}
++              {user.is_blocked && <Field label="Block reason">{user.blocked_reason}</Field>}
++              {user.status === "locked" && <Field label="Locked until">{formatDateTime(user.locked_until)}</Field>}
++              {user.deletion_scheduled_at && <Field label="Deletion scheduled for">{formatDateTime(user.deletion_scheduled_at)}</Field>}
++            </dl>
++
++            <p className="mt-5 flex items-start gap-2 rounded-xl bg-primary-soft/60 p-3 text-xs text-muted">
++              <Icon name="shield" size={15} className="mt-px shrink-0 text-primary" />
++              Admins can manage access only. A user's financial records are never shown in the admin panel.
++            </p>
++
++            <div className="mt-5 border-t border-itemBorder pt-5">
++              {!check.allowed ? (
++                <p className="text-sm text-muted">{check.reason}</p>
++              ) : blocking ? (
++                <div className="space-y-3">
++                  <TextArea label="Reason for blocking" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} rows={3} required
++                    hint="Saved with the block and in the admin audit trail. The user is signed out immediately." />
++                  <div className="flex justify-end gap-2">
++                    <Button variant="secondary" onClick={() => { setBlocking(false); setReason(""); }} disabled={busy}>Cancel</Button>
++                    <Button variant="danger" loading={busy} disabled={reason.trim().length < 3}
++                      onClick={() => run(() => adminApi.blockUser(username, reason.trim()), "Account blocked.")}>Block account</Button>
++                  </div>
++                </div>
++              ) : (
++                <div className="flex flex-wrap gap-2">
++                  {user.is_blocked ? (
++                    <Button variant="secondary" onClick={() => setConfirm("unblock")}><Icon name="check" size={15} /> Unblock</Button>
++                  ) : (
++                    <Button variant="dangerGhost" onClick={() => setBlocking(true)}><Icon name="ban" size={15} /> Block</Button>
++                  )}
++                  {user.status === "locked" && <Button variant="secondary" onClick={() => setConfirm("unlock")}><Icon name="key" size={15} /> Clear login lock</Button>}
++                  {!user.email_confirmed && !user.deletion_scheduled_at && <Button variant="secondary" onClick={() => setConfirm("verify")}><Icon name="mail" size={15} /> Resend verification</Button>}
++                  <Button variant="secondary" onClick={() => setConfirm("revoke")}><Icon name="logout" size={15} /> Sign out everywhere</Button>
++                </div>
++              )}
++            </div>
++          </div>
++        )}
++      </Modal>
++
++      {confirmCopy && (
++        <ConfirmDialog open onClose={() => setConfirm(null)} onConfirm={confirmCopy.action} loading={busy}
++          title={confirmCopy.title} description={confirmCopy.text} confirmLabel={confirmCopy.label} tone="primary" />
++      )}
++    </>
++  );
++}
++
++export default function Users() {
++  const { me } = useAdmin();
++  const [search, setSearch] = useState("");
++  const debouncedSearch = useDebounced(search);
++  const [status, setStatus] = useState("");
++  const [role, setRole] = useState("");
++  const [page, setPage] = useState(1);
++  const [pageSize, setPageSize] = useState(20);
++  const [items, setItems] = useState([]);
++  const [total, setTotal] = useState(0);
++  const [loading, setLoading] = useState(true);
++  const [openUser, setOpenUser] = useState(null);
++
++  const load = useCallback(async () => {
++    setLoading(true);
++    try {
++      const result = await adminApi.listUsers({
++        q: debouncedSearch.trim() || undefined, status: status || undefined, role: role || undefined, page, page_size: pageSize,
++      });
++      setItems(result.items);
++      setTotal(result.total);
++      const lastPage = Math.max(1, Math.ceil(result.total / pageSize));
++      if (page > lastPage) setPage(lastPage);
++    } catch (err) {
++      toast.error(apiErrorMessage(err));
++    } finally {
++      setLoading(false);
++    }
++  }, [debouncedSearch, status, role, page, pageSize]);
++
++  useEffect(() => { load(); }, [load]);
++
++  const filter = (setter) => (value) => { setter(value); setPage(1); };
++
++  const columns = [
++    {
++      key: "user", header: "User",
++      render: (u) => (
++        <div className="min-w-0">
++          <p className="truncate font-semibold text-ink">{fullName(u)}</p>
++          <p className="truncate text-xs text-muted">@{u.username}</p>
++        </div>
++      ),
++    },
++    { key: "email", header: "Email", render: (u) => <span className="break-all text-muted">{u.email}</span> },
++    { key: "role", header: "Role", render: (u) => <Badge tone={ROLE_TONE[u.role] || "neutral"}>{roleLabel(u.role)}</Badge> },
++    { key: "status", header: "Status", render: (u) => <StatusBadge map={USER_STATUS} value={u.status} /> },
++    { key: "created_at", header: "Joined", render: (u) => <span className="whitespace-nowrap text-muted">{formatDate(u.created_at)}</span> },
++  ];
++
++  return (
++    <div>
++      <PageHeader
++        eyebrow="Accounts"
++        title="Users"
++        subtitle="See account status and manage access. Financial records stay private and are never shown here."
++      />
++
++      <Card>
++        <div className="mb-4 flex flex-wrap items-center gap-2.5">
++          <SearchBox value={search} onChange={filter(setSearch)} placeholder="Search name, username or email" />
++          <FilterSelect label="Status" value={status} onChange={filter(setStatus)}
++            options={[["", "Any status"], ["active", "Active"], ["unverified", "Unverified"], ["blocked", "Blocked"], ["locked", "Locked"], ["pending_deletion", "Pending deletion"]]} />
++          <FilterSelect label="Role" value={role} onChange={filter(setRole)}
++            options={[["", "Any role"], ["user", "Members"], ["admin", "Admins"], ["super_admin", "Super admin"]]} />
++        </div>
++
++        {loading && items.length === 0 ? (
++          <div className="flex justify-center py-14"><Spinner /></div>
++        ) : items.length === 0 ? (
++          <EmptyState title="No users found" description="Try a different search or filter." />
++        ) : (
++          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
++            <Table columns={columns} rows={items} rowKey="username" onRowClick={(u) => setOpenUser(u.username)} />
++          </div>
++        )}
++
++        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage}
++          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />
++      </Card>
++
++      {openUser && <UserDetailModal username={openUser} me={me} onClose={() => setOpenUser(null)} onChanged={load} />}
++    </div>
++  );
++}
+diff -ruN frontend_src_before_admin/pages/admin/adminUi.jsx "/home/claude/sfms-frontend ac/src/pages/admin/adminUi.jsx"
+--- frontend_src_before_admin/pages/admin/adminUi.jsx	1970-01-01 00:00:00.000000000 +0000
++++ "/home/claude/sfms-frontend ac/src/pages/admin/adminUi.jsx"	2026-11-05 01:46:11.255222469 +0000
+@@ -0,0 +1,79 @@
++import React, { useEffect, useState } from "react";
++import Badge from "../../components/ui/Badge";
++import Icon from "../../components/ui/Icon";
++
++export const MESSAGE_STATUS = {
++  new: { label: "New", tone: "primary" },
++  in_progress: { label: "In progress", tone: "gold" },
++  resolved: { label: "Resolved", tone: "emerald" },
++};
++
++export const USER_STATUS = {
++  active: { label: "Active", tone: "emerald" },
++  unverified: { label: "Unverified", tone: "gold" },
++  blocked: { label: "Blocked", tone: "danger" },
++  locked: { label: "Locked", tone: "gold" },
++  pending_deletion: { label: "Pending deletion", tone: "neutral" },
++};
++
++export function StatusBadge({ map, value }) {
++  const entry = map[value] || { label: value, tone: "neutral" };
++  return <Badge tone={entry.tone}>{entry.label}</Badge>;
++}
++
++export function useDebounced(value, ms = 350) {
++  const [debounced, setDebounced] = useState(value);
++  useEffect(() => {
++    const id = setTimeout(() => setDebounced(value), ms);
++    return () => clearTimeout(id);
++  }, [value, ms]);
++  return debounced;
++}
++
++/** Search box with a magnifier icon, used by the admin list filters. */
++export function SearchBox({ value, onChange, placeholder }) {
++  return (
++    <label className="relative block min-w-0 flex-1">
++      <span className="sr-only">{placeholder}</span>
++      <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
++      <input
++        type="search"
++        value={value}
++        onChange={(e) => onChange(e.target.value)}
++        placeholder={placeholder}
++        maxLength={100}
++        className="w-full rounded-xl border border-cardBorder bg-input py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-subtle outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/15"
++      />
++    </label>
++  );
++}
++
++export function FilterSelect({ label, value, onChange, options }) {
++  return (
++    <label className="block">
++      <span className="sr-only">{label}</span>
++      <select
++        value={value}
++        onChange={(e) => onChange(e.target.value)}
++        aria-label={label}
++        className="rounded-xl border border-cardBorder bg-input px-3 py-2.5 text-sm font-medium text-ink outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15"
++      >
++        {options.map(([val, text]) => <option key={val} value={val}>{text}</option>)}
++      </select>
++    </label>
++  );
++}
++
++/** Today -> "14:05", this year -> "5 Nov", older -> "5 Nov 2025". Used in compact lists. */
++export function shortDate(value) {
++  const d = new Date(value);
++  if (Number.isNaN(d.getTime())) return "";
++  const now = new Date();
++  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
++  const opts = d.getFullYear() === now.getFullYear() ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" };
++  return d.toLocaleDateString("en-GB", opts);
++}
++
++export function fullName(user) {
++  return [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() || user?.username || "";
++}
+diff -ruN frontend_src_before_admin/pages/public/Contact.jsx "/home/claude/sfms-frontend ac/src/pages/public/Contact.jsx"
+--- frontend_src_before_admin/pages/public/Contact.jsx	2026-11-05 01:45:24.300762159 +0000
++++ "/home/claude/sfms-frontend ac/src/pages/public/Contact.jsx"	2026-11-05 06:29:38.427856283 +0000
+@@ -1,13 +1,13 @@
+ import { useRef, useState } from "react";
+ import { Link } from "react-router-dom";
++import { publicApi } from "../../api/public";
++import { apiErrorMessage } from "../../api/client";
+ import Seo from "../../components/Seo";
+ import { Ic, useFx } from "./sfmsUi";
+ import "./common.css";
+ import "./Contact.css";
+ 
+-// Set VITE_CONTACT_EMAIL in .env. The backend has no contact endpoint, so the form opens the visitor's email app.
+-const TO = import.meta.env.VITE_CONTACT_EMAIL;
+-
++// The form posts to POST /api/public/contact; admins read and answer it from the admin panel.
+ const TOPICS = [
+   ["Account help", "chat", "Sign-in, verification, profile or password questions."],
+   ["Feedback and ideas", "spark", "Tell us what would make SFMS better for you."],
+@@ -18,15 +18,30 @@
+   const root = useRef();
+   const move = useFx(root);
+   const [topic, setTopic] = useState(0), [sent, setSent] = useState(false);
+-  const [form, setForm] = useState({ name: "", email: "", message: "" });
++  const [busy, setBusy] = useState(false), [error, setError] = useState("");
++  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "", website: "" });
+   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+ 
+-  const submit = (e) => {
++  const submit = async (e) => {
+     e.preventDefault();
+-    if (!TO) return;
+-    const body = `${form.message}\n\n${form.name} (${form.email})`;
+-    window.location.href = `mailto:${TO}?subject=${encodeURIComponent("[SFMS] " + TOPICS[topic][0])}&body=${encodeURIComponent(body)}`;
+-    setSent(true);
++    if (busy) return;
++    setBusy(true);
++    setError("");
++    try {
++      await publicApi.submitContact({
++        name: form.name.trim(),
++        email: form.email.trim(),
++        subject: form.subject.trim() || TOPICS[topic][0],
++        message: form.message.trim(),
++        website: form.website, // honeypot: stays empty for real visitors
++      });
++      setSent(true);
++      setForm({ name: "", email: "", subject: "", message: "", website: "" });
++    } catch (err) {
++      setError(apiErrorMessage(err, "We couldn't send your message. Please try again in a moment."));
++    } finally {
++      setBusy(false);
++    }
+   };
+ 
+   return (
+@@ -60,18 +75,22 @@
+           {sent ? (
+             <div className="ct-ok">
+               <span className="okc"><Ic n="mail" s={26} /></span>
+-              <h3>Your email app should be open</h3>
+-              <p>Your message is ready to send in your email app. If nothing opened, write to <b>{TO}</b> directly.</p>
+-              <button type="button" className="btn out" onClick={() => setSent(false)}>Edit message</button>
++              <h3>Message sent. Thank you!</h3>
++              <p>We have received your message and will reply to the email address you gave us.</p>
++              <button type="button" className="btn out" onClick={() => setSent(false)}>Send another message</button>
+             </div>
+           ) : (
+             <form onSubmit={submit}>
+               <h3>Send a message</h3><p className="mut">Topic: <b>{TOPICS[topic][0]}</b></p>
+-              {!TO && <p className="ct-warn" role="status">Messaging is not set up yet. Please check back soon.</p>}
+-              <label className="ct-f">Name<input required value={form.name} onChange={set("name")} autoComplete="name" /></label>
+-              <label className="ct-f">Email<input required type="email" value={form.email} onChange={set("email")} autoComplete="email" /></label>
+-              <label className="ct-f">Message<textarea required rows={5} value={form.message} onChange={set("message")} /></label>
+-              <button type="submit" className="btn pri lg" style={{ width: "100%" }} disabled={!TO}>Send message <Ic n="arrow" s={18} /></button>
++              {error && <p className="ct-warn" role="alert">{error}</p>}
++              <label className="ct-f">Name<input required maxLength={100} value={form.name} onChange={set("name")} autoComplete="name" /></label>
++              <label className="ct-f">Email<input required type="email" maxLength={254} value={form.email} onChange={set("email")} autoComplete="email" /></label>
++              <label className="ct-f">Subject (optional)<input maxLength={200} value={form.subject} onChange={set("subject")} placeholder={TOPICS[topic][0]} /></label>
++              <label className="ct-f">Message<textarea required minLength={10} maxLength={5000} rows={5} value={form.message} onChange={set("message")} /></label>
++              {/* Honeypot: hidden from people, tempting for bots. A filled value makes the backend discard the message. */}
++              <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={form.website} onChange={set("website")}
++                style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
++              <button type="submit" className="btn pri lg" style={{ width: "100%" }} disabled={busy}>{busy ? "Sending…" : "Send message"} <Ic n="arrow" s={18} /></button>
+             </form>
+           )}
+         </div>

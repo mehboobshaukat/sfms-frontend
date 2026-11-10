@@ -1,0 +1,32 @@
+/* Internal app shell: navy sidebar (same family as the public footer), frosted top bar. */
+.sfms-side { position: relative; overflow: hidden; color: #c8d8f5; background: linear-gradient(180deg, #061330 0%, #0a2455 60%, #0b2a66 100%); border-right: 1px solid rgba(255, 255, 255, 0.06); }
+.sfms-side::before { content: ""; position: absolute; top: -120px; right: -120px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(23, 200, 242, 0.22), transparent 68%); pointer-events: none; }
+.sfms-side > * { position: relative; }
+
+.sfms-nav { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; font-size: 0.9rem; font-weight: 600; color: #b9cbee; text-decoration: none; transition: background 0.2s, color 0.2s, transform 0.2s; }
+.sfms-nav:hover { color: #fff; background: rgba(255, 255, 255, 0.08); transform: translateX(2px); }
+.sfms-nav svg { flex: none; transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1), color 0.2s; }
+.sfms-nav:hover svg { transform: scale(1.14); }
+.sfms-nav.is-active { color: #fff; background: linear-gradient(90deg, rgba(23, 200, 242, 0.22), rgba(21, 101, 255, 0.18)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09); }
+.sfms-nav.is-active svg { color: #6fe3ff; }
+.sfms-nav.is-active::before { content: ""; position: absolute; left: -16px; top: 9px; bottom: 9px; width: 4px; border-radius: 0 6px 6px 0; background: linear-gradient(180deg, #17c8f2, #1565ff); box-shadow: 0 0 12px rgba(23, 200, 242, 0.7); }
+
+/* the menu scrolls on short screens, but without a visible scrollbar; soft fades at the edges hint that more is there */
+.sfms-side-nav { scrollbar-width: none; -ms-overflow-style: none; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); padding-block: 8px; }
+.sfms-side-nav::-webkit-scrollbar { display: none; }
+@media (max-height: 860px) {
+  .sfms-side .sfms-brand { margin-bottom: 10px; }
+  .sfms-side .sfms-nav { padding-block: 7px; font-size: 0.86rem; }
+  .sfms-side .sfms-nav-list { gap: 1px; }
+  .sfms-side .sfms-profile { margin-top: 8px; }
+  .sfms-side .sfms-profile > div { padding-block: 9px; }
+}
+@media (max-height: 700px) { .sfms-side .sfms-nav { padding-block: 5px; } .sfms-side .sfms-brand-logo { width: 36px; height: 36px; } }
+.sfms-brand img { transition: transform 0.4s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.sfms-brand:hover .sfms-brand-logo { transform: rotate(-6deg) scale(1.08); }
+.sfms-profile { border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.07); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: background 0.2s, border-color 0.2s, transform 0.2s; }
+.sfms-profile:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(23, 200, 242, 0.4); transform: translateY(-2px); }
+.sfms-profile.is-active { border-color: rgba(23, 200, 242, 0.55); background: rgba(23, 200, 242, 0.14); }
+
+.sfms-topbar { background: rgba(255, 255, 255, 0.78); -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); }
+.sfms-topbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: linear-gradient(90deg, transparent, #17c8f2 30%, #1565ff 70%, transparent); opacity: 0.45; pointer-events: none; }
