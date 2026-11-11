@@ -52,9 +52,7 @@
   .pl-ft { position: relative; isolation: isolate; overflow: hidden; margin-top: auto; color: #a9bde6; background: linear-gradient(135deg, #061330, #0b2a66); }
   .pl-ft .grid-bg { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
   .pl-ft-in, .pl-ft-b { position: relative; z-index: 1; }
-  .pl-ft-in { display: grid; grid-template-columns: 1.7fr repeat(3, 1fr); grid-template-areas: "brand explore company account"; align-items: center; gap: 40px; padding: 56px clamp(16px, 3vw, 48px) 36px; }
-  .pl-ft-brand { grid-area: brand; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
-  .pl-ft-explore { grid-area: explore; } .pl-ft-company { grid-area: company; } .pl-ft-account { grid-area: account; }
+  .pl-ft-in { display: grid; grid-template-columns: 1.7fr repeat(3, 1fr); gap: 40px; padding: 56px clamp(16px, 3vw, 48px) 36px; }
   .pl-ft .pl-word img { height: 28px; filter: drop-shadow(0 2px 10px rgba(70, 200, 255, 0.35)); }
   .pl-ft .pl-word .wm-dark { display: none; } .pl-ft .pl-word .wm-light { display: block; }
   .pl-ft .pl-word small { color: #9fb6e3; text-shadow: none; }
@@ -65,7 +63,7 @@
   .pl-flink { padding: 0; font-size: 0.9rem; color: #a9bde6; background: none; border: 0; cursor: pointer; transition: color 0.2s, padding 0.2s; } .pl-flink:hover { padding-left: 4px; color: #fff; }
   .pl-ft li a { font-size: 0.9rem; color: #a9bde6; text-decoration: none; transition: color 0.2s, padding 0.2s; }
   .pl-ft li a:hover { padding-left: 4px; color: #fff; }
-  .pl-ft-dev { position: relative; z-index: 1; display: flex; justify-content: flex-start; margin-top: 22px; padding-left: 36px; }
+  .pl-ft-dev { position: relative; z-index: 1; display: flex; justify-content: center; padding: 4px clamp(16px, 3vw, 48px) 30px; }
   .pl-ft-b { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding: 20px clamp(16px, 3vw, 48px); border-top: 1px solid rgba(255, 255, 255, 0.12); font-size: 0.82rem; }
 
   @media (max-width: 1100px) { .pl-nav a { padding: 9px 11px; } .pl-nav a::after { left: 11px; right: 11px; } }
@@ -74,21 +72,14 @@
     .pl-menu { display: inline-flex; }
     .pl-acts { margin-left: auto; }
     .pl-word img { height: 22px; }
-    .pl-ft-in { grid-template-columns: 1.5fr repeat(3, 1fr); gap: 28px; }
+    .pl-ft-in { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 560px) {
     .pl-bar { gap: 10px; height: 66px; }
     .pl-logo { width: 42px; height: 42px; }
     .pl-brand { gap: 9px; } .pl-word img { height: 20px; } .pl-word small { display: none; }
     .pl-acts { gap: 8px; } .pl-btn { padding: 0 14px; }
-    .pl-ft-in { grid-template-columns: 1fr; grid-template-areas: none; align-items: stretch; gap: 28px; padding-top: 40px; }
-    .pl-ft-brand { display: contents; }
-    .pl-ft-brand .pl-brand { order: 1; }
-    .pl-ft-brand p { order: 2; margin: 0; }
-    .pl-ft-company { order: 3; }
-    .pl-ft-explore { order: 4; }
-    .pl-ft-dev { order: 5; margin-top: 0; padding: 0; justify-content: center; }
-    .pl-ft-account { order: 6; }
+    .pl-ft-in { grid-template-columns: 1fr; gap: 28px; padding-top: 40px; }
   }
   @media (max-width: 560px) { .pl-out { display: none; } }
   @media (max-width: 420px) { .pl-acts .pl-btn { display: none; } .pl-word img { height: 18px; } }
