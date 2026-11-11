@@ -452,7 +452,7 @@ export default function AiAssistant() {
         <Button size="sm" variant="secondary" onClick={load} disabled={loading || busy}>Refresh</Button>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <label className="relative min-w-[200px] flex-1">
+        <label className="relative min-w-0 flex-1 basis-[200px]">
           <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by description or amount…" aria-label="Search drafts" className={`${FIELD} w-full pl-10 pr-10 font-normal`} />
           {search && <button type="button" onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-lg leading-none text-muted hover:bg-hover hover:text-ink">×</button>}

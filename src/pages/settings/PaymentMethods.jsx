@@ -138,7 +138,7 @@ export default function PaymentMethods() {
       header: "",
       className: "text-right",
       render: (r) => (
-        <div className="flex justify-end gap-2">
+        <div className="sfms-actions justify-end">
           {r.is_active && (
             <>
               <Button size="sm" variant="secondary" onClick={() => openEdit(r)}>Edit</Button>

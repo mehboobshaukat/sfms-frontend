@@ -25,6 +25,7 @@ import Select from "../../components/ui/Select";
 import { Input } from "../../components/ui/Input";
 import { formatCurrency, formatDate, txnDisplayAmount } from "../../lib/formatters";
 import useCountUp from "../../lib/useCountUp";
+import useViewMode, { TABLE_QUERY } from "../../lib/useViewMode";
 
 const emptyFilters = {
   date_from: "",
@@ -37,11 +38,7 @@ const emptyFilters = {
   contact_slug: "",
 };
 
-const VIEW_KEY = "sfms-transactions-view";
 
-function readView() {
-  try { return localStorage.getItem(VIEW_KEY) === "table" ? "table" : "list"; } catch { return "list"; }
-}
 
 const pad = (n) => String(n).padStart(2, "0");
 const localISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -95,7 +92,7 @@ export default function TransactionsList() {
   const [filters, setFilters] = useState(emptyFilters);
   const [activeFilters, setActiveFilters] = useState(emptyFilters);
   const [search, setSearch] = useState(searchParams.get("search") || "");
-  const [view, setView] = useState(readView);
+  const [view, changeView] = useViewMode("sfms-transactions-view", { wide: "table", narrow: "list", query: TABLE_QUERY });
   const [overview, setOverview] = useState(null);
 
   const [types, setTypes] = useState([]);
@@ -215,10 +212,6 @@ export default function TransactionsList() {
     load(1, next);
   };
 
-  const changeView = (next) => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage unavailable: the choice just won't persist */ }
-  };
 
   const FILTER_CHIPS = {
     date_from: ["From", (v) => formatDate(v)],
@@ -298,7 +291,7 @@ export default function TransactionsList() {
       {/* ---------- toolbar ---------- */}
       <Card className="!p-3.5 sm:!p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="relative min-w-[220px] flex-1">
+          <label className="relative min-w-0 flex-1 basis-[220px]">
             <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               value={search}
@@ -416,7 +409,7 @@ export default function TransactionsList() {
         ) : (
           <CardBody className={`p-0 pt-2 transition-opacity duration-200 ${loading ? "pointer-events-none opacity-60" : ""}`}>
             {term && (
-              <div className="mx-5 mb-3 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary-soft/60 px-3.5 py-2 text-xs text-nav">
+              <div className="mx-4 mb-3 mt-4 flex flex-wrap sm:mx-5 items-center justify-between gap-2 rounded-xl bg-primary-soft/60 px-3.5 py-2 text-xs text-nav">
                 <span>Showing <b className="text-ink">{visibleRows.length}</b> of {rows.length} rows on this page for “{search.trim()}”.</span>
                 <button type="button" onClick={() => setSearch("")} className="font-bold text-primary hover:underline">Clear search</button>
               </div>
@@ -430,7 +423,7 @@ export default function TransactionsList() {
               <div>
                 {groups.map((group) => (
                   <section key={group.date} aria-label={dayLabel(group.date)}>
-                    <div className="flex items-center justify-between gap-3 border-y border-itemBorder bg-primary-soft/50 px-5 py-2">
+                    <div className="flex items-center justify-between gap-3 border-y border-itemBorder bg-primary-soft/50 px-4 py-2 sm:px-5">
                       <h3 className="font-display text-[12px] font-extrabold uppercase tracking-[0.08em] text-nav">{dayLabel(group.date)}</h3>
                       <span className={`text-[12px] font-bold ${group.net > 0 ? "text-emerald" : group.net < 0 ? "text-danger" : "text-muted"}`}>{group.net > 0 ? "+" : ""}{formatCurrency(group.net)}</span>
                     </div>
@@ -440,12 +433,12 @@ export default function TransactionsList() {
                         const contact = contactOf(r);
                         return (
                           <li key={r.transaction_code}>
-                            <Link to={`/transactions/${r.transaction_code}`} className="group flex items-center gap-3.5 px-5 py-3.5 no-underline transition hover:bg-primary-soft/40">
+                            <Link to={`/transactions/${r.transaction_code}`} className="group flex items-center gap-3 px-4 py-3.5 no-underline transition hover:bg-primary-soft/40 max-[399px]:flex-wrap sm:gap-3.5 sm:px-5">
                               <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3 ${rowTone(amount)}`}>
                                 <Icon name={amount > 0 ? "arrowDownLong" : amount < 0 ? "arrowUp" : "transactions"} size={19} />
                               </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[14px] font-bold text-ink transition group-hover:text-primary">{r.description}</p>
+                              <div className="min-w-0 flex-1 max-[399px]:basis-[calc(100%-3.5rem)]">
+                                <p className="line-clamp-2 break-words text-[14px] font-bold leading-snug text-ink transition group-hover:text-primary sm:truncate">{r.description}</p>
                                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-muted">
                                   <Badge tone="neutral">{typeOf(r)}</Badge>
                                   {categoryOf(r) !== "—" && <span>{categoryOf(r)}</span>}
@@ -455,9 +448,9 @@ export default function TransactionsList() {
                                 </div>
                               </div>
                               <span className="hidden shrink-0 md:inline-block"><Badge tone="gold">{priorityOf(r)}</Badge></span>
-                              <span className={`shrink-0 text-right text-[14px] font-extrabold ${amount > 0 ? "text-emerald" : amount < 0 ? "text-danger" : "text-ink"}`}>
+                              <span className={`shrink-0 text-right text-[14px] font-extrabold max-[399px]:ml-14 max-[399px]:text-left ${amount > 0 ? "text-emerald" : amount < 0 ? "text-danger" : "text-ink"}`}>
                                 {amount > 0 ? "+" : ""}{formatCurrency(amount)}
-                                <span className="block text-[10.5px] font-medium text-subtle">{r.transaction_code}</span>
+                                <span className="hidden text-[10.5px] font-medium text-subtle sm:block">{r.transaction_code}</span>
                               </span>
                               <Icon name="chevronRight" size={16} className="hidden shrink-0 text-subtle transition group-hover:translate-x-0.5 group-hover:text-primary sm:block" />
                             </Link>
@@ -470,7 +463,7 @@ export default function TransactionsList() {
               </div>
             )}
 
-            <div className="px-5 pb-2 pt-3">
+            <div className="px-4 pb-2 pt-3 sm:px-5">
               <Pagination page={page} pageSize={pageSize} total={total} onPageChange={(p) => load(p)} onPageSizeChange={(size) => { setPage(1); setPageSize(size); }} />
             </div>
           </CardBody>

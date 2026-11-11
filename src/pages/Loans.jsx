@@ -18,6 +18,7 @@ import ProgressBar from "../components/ui/ProgressBar";
 import StatTile from "../components/ui/StatTile";
 import { formatCurrency, formatDate } from "../lib/formatters";
 import { dueInfo, paidPercent } from "../lib/dueInfo";
+import useViewMode, { TABLE_QUERY } from "../lib/useViewMode";
 
 const TABS = [
   { key: "all", label: "All Loans" },
@@ -37,10 +38,6 @@ const SORTS = [
   { key: "remaining", label: "Largest remaining" },
 ];
 
-const VIEW_KEY = "sfms-loans-view";
-const readView = () => {
-  try { return localStorage.getItem(VIEW_KEY) === "table" ? "table" : "list"; } catch { return "list"; }
-};
 
 const isBorrowed = (loan) => loan.loan_type === "received";
 
@@ -49,7 +46,7 @@ export default function Loans() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
-  const [view, setView] = useState(readView);
+  const [view, changeView] = useViewMode("sfms-loans-view", { wide: "table", narrow: "list", query: TABLE_QUERY });
   const [loans, setLoans] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,10 +65,6 @@ export default function Loans() {
 
   const contactName = (slug) => (slug ? contacts.find((c) => c.slug === slug)?.name || "—" : "—");
 
-  const changeView = (next) => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage unavailable: choice just won't persist */ }
-  };
 
   // Overview figures use every loan, so they stay put while you switch tabs.
   const open = loans.filter((l) => !l.is_completed);
@@ -162,7 +155,7 @@ export default function Loans() {
       {/* ---------- toolbar ---------- */}
       <Card className="!p-3.5 sm:!p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="relative min-w-[200px] flex-1">
+          <label className="relative min-w-0 flex-1 basis-[200px]">
             <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               value={search}

@@ -175,7 +175,7 @@ export default function Categories() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="sfms-actions">
                   <Button size="sm" variant="secondary" onClick={() => openLinks(c)}>Links</Button>
                   {c.is_active ? (
                     <>

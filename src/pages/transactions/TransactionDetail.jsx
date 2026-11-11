@@ -112,7 +112,7 @@ export default function TransactionDetail() {
         title={txn.transaction_code}
         subtitle={`Recorded ${formatDateTime(txn.created_at)}`}
         actions={
-          <div className="flex gap-2">
+          <div className="sfms-actions">
             <Button variant="secondary" onClick={openEdit}>
               Edit
             </Button>

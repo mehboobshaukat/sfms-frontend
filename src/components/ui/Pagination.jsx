@@ -20,14 +20,14 @@ export default function Pagination({ page, pageSize, total, onPageChange, onPage
   if (totalPages <= 1 && !onPageSizeChange) return null;
 
   return (
-    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 border-t border-itemBorder px-1 pt-4" aria-label="Pagination controls">
+    <div className="mt-1 flex flex-col gap-3 border-t border-itemBorder px-1 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between" aria-label="Pagination controls">
       <p className="text-xs font-medium text-muted">
         {total === 0 ? "No records" : `Showing ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total}`}
         {` · Page ${page} of ${totalPages}`}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {onPageSizeChange && (
-          <>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <label htmlFor="list-page-size" className="text-xs text-muted">Rows per page</label>
             <select
               id="list-page-size"
@@ -56,10 +56,12 @@ export default function Pagination({ page, pageSize, total, onPageChange, onPage
               disabled={!Number.isInteger(Number(customSize)) || Number(customSize) < 1 || Number(customSize) > MAX_PAGE_SIZE}>
               Apply
             </Button>
-          </>
+          </div>
         )}
-        <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</Button>
-        <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Next</Button>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</Button>
+          <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Next</Button>
+        </div>
       </div>
     </div>
   );

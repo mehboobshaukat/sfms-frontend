@@ -40,9 +40,12 @@
 
 * { box-sizing: border-box; }
 html { background: var(--bg-main); }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body, #root { min-height: 100%; }
+@supports (min-height: 100dvh) { #root { min-height: 100dvh; } }
 body {
   margin: 0;
+  overflow-x: clip; /* nothing can ever push the page sideways */
   background-color: var(--bg-main);
   background-image: var(--body-gradient);
   color: var(--text-main);
@@ -130,4 +133,51 @@ table { font-variant-numeric: tabular-nums; }
   .sfms-page, .sfms-page .sfms-card { animation: none !important; }
   .sfms-card, .sfms-card:hover { box-shadow: none !important; break-inside: avoid; }
   .sfms-main { padding: 0 !important; max-width: none !important; }
+}
+
+
+/* ---------- responsive hardening (phones, tablets, foldables, desktops) ---------- */
+img, video, canvas { max-width: 100%; }
+.sfms-main :is(h1, h2, h3, h4, p, li, dd, dt, label) { overflow-wrap: break-word; }
+
+/* Button rows: wrap on desktop; on phones they become an even grid so nothing is clipped. */
+.sfms-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; min-width: 0; }
+@media (max-width: 639.98px) {
+  .sfms-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); width: 100%; }
+  .sfms-actions > * { width: 100%; min-width: 0; }
+  .sfms-actions button, .sfms-actions a { min-height: 40px; }
+}
+td .sfms-actions, th .sfms-actions { display: flex; width: auto; flex-wrap: nowrap; }
+td .sfms-actions > * { width: auto; }
+
+/* Phones: iOS zooms into any field below 16px, so fields are 16px there. Pages respect notches. */
+@media (max-width: 639.98px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
+  .sfms-main { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+}
+.sfms-topbar { padding-top: env(safe-area-inset-top); }
+
+/* Scrolling chip rows: snap + an edge fade so a cut-off chip reads as "scrolls", not "broken". */
+.sfms-noscroll { scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.sfms-noscroll > * { scroll-snap-align: start; flex-shrink: 0; }
+@media (max-width: 1023.98px) {
+  .sfms-noscroll.overflow-x-auto { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 22px), transparent 100%); }
+}
+
+/* Large screens: keep line lengths and card grids sensible; TVs and 4K get a little more air. */
+@media (min-width: 1920px) { html { font-size: 17px; } }
+@media (min-width: 2560px) { html { font-size: 19px; } }
+
+/* Very small phones (320px) and split-screen windows. */
+@media (max-width: 359.98px) {
+  .sfms-main { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .text-3xl { font-size: 1.6rem; }
+}
+
+/* Short landscape phones: don't let sticky bars eat the screen. */
+@media (max-height: 480px) and (orientation: landscape) { .sfms-topbar { position: static; } }
+
+/* Hover-only effects stay off touch devices so taps don't leave "stuck" states. */
+@media (hover: none) {
+  .sfms-nav:hover, .sfms-profile:hover, .sfms-hero-stat:hover { transform: none; }
 }

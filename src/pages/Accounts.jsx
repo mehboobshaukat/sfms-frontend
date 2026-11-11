@@ -20,6 +20,7 @@ import Icon from "../components/ui/Icon";
 import StatTile from "../components/ui/StatTile";
 import ProgressBar from "../components/ui/ProgressBar";
 import useCountUp from "../lib/useCountUp";
+import useViewMode, { CARDS_QUERY } from "../lib/useViewMode";
 
 const emptyForm = { name: "", account_type: "cash", account_number: "", bank_name: "", branch: "", current_balance: "0" };
 
@@ -32,10 +33,6 @@ const TYPE_TABS = [{ key: "all", label: "All" }, { key: "cash", label: "Cash" },
 const STATUS_TABS = [{ key: "all", label: "All" }, { key: "active", label: "Active" }, { key: "inactive", label: "Inactive" }];
 const SORTS = [{ key: "default", label: "Default order" }, { key: "balance", label: "Highest balance" }, { key: "name", label: "Name A to Z" }];
 const SEGMENT_COLORS = ["#1565ff", "#17c8f2", "#10b981", "#f5a524", "#9a74f5", "#ee79a8"];
-const VIEW_KEY = "sfms-accounts-view";
-const readView = () => {
-  try { return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "cards"; } catch { return "cards"; }
-};
 
 /** Balance that counts up to its value. */
 function Balance({ value }) {
@@ -57,7 +54,7 @@ export default function Accounts() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sort, setSort] = useState("default");
-  const [view, setView] = useState(readView);
+  const [view, changeView] = useViewMode("sfms-accounts-view", { wide: "cards", narrow: "list", query: CARDS_QUERY });
 
   const load = async () => {
     setLoading(true);
@@ -143,10 +140,6 @@ export default function Accounts() {
     }
   };
 
-  const changeView = (next) => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage unavailable: choice just won't persist */ }
-  };
 
   const active = items.filter((a) => a.is_active);
   const totalBalance = active.reduce((sum, a) => sum + (Number(a.current_balance) || 0), 0);
@@ -180,7 +173,7 @@ export default function Accounts() {
   }, [items, typeFilter, statusFilter, term, sort]);
 
   const actionButtons = (a) => (
-    <div className="flex flex-wrap gap-2">
+    <div className="sfms-actions">
       {a.is_active && <Button size="sm" variant="secondary" onClick={() => openEdit(a)}>Edit</Button>}
       {!a.is_default && !a.is_system && a.is_active && <Button size="sm" variant="dangerGhost" onClick={() => setDeleteTarget(a)}>Deactivate</Button>}
       {!a.is_active && !a.is_default && !a.is_system && <Button size="sm" variant="luxury" onClick={() => setActivateTarget(a)}>Activate</Button>}
@@ -246,7 +239,7 @@ export default function Accounts() {
           {/* ---------- toolbar ---------- */}
           <Card className="!p-3.5 sm:!p-4">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="relative min-w-[200px] flex-1">
+              <label className="relative min-w-0 flex-1 basis-[200px]">
                 <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, bank or account number…" aria-label="Search accounts" className="h-11 w-full rounded-xl border border-cardBorder bg-input pl-10 pr-10 text-sm text-ink outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/15" />
                 {search && <button type="button" onClick={() => setSearch("")} aria-label="Clear search" className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-lg leading-none text-muted hover:bg-hover hover:text-ink">×</button>}
@@ -329,8 +322,8 @@ export default function Accounts() {
                   const meta = TYPE_META[a.account_type] || TYPE_META.cash;
                   const balance = Number(a.current_balance) || 0;
                   return (
-                    <li key={a.slug} className={`group flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-5 py-3.5 transition hover:bg-primary-soft/40 ${a.is_active ? "" : "opacity-75"}`}>
-                      <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                    <li key={a.slug} className={`group flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3.5 sm:px-5 transition hover:bg-primary-soft/40 ${a.is_active ? "" : "opacity-75"}`}>
+                      <div className="flex min-w-0 flex-1 basis-[14rem] items-center gap-3.5">
                         <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3 ${meta.tone}`}><Icon name={meta.icon} size={19} /></span>
                         <div className="min-w-0">
                           <p className="truncate text-[14px] font-bold text-ink">{a.name}</p>
@@ -344,7 +337,7 @@ export default function Accounts() {
                         </div>
                       </div>
                       <span className={`shrink-0 text-[15px] font-extrabold ${balance < 0 ? "text-danger" : "text-ink"}`}>{formatCurrency(a.current_balance)}</span>
-                      <div className="shrink-0">{actionButtons(a)}</div>
+                      <div className="w-full sm:w-auto sm:shrink-0">{actionButtons(a)}</div>
                     </li>
                   );
                 })}

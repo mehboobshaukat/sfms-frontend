@@ -102,7 +102,7 @@
   .ai-feed { padding: 16px 12px; max-height: 480px; }
   .ai-bubble { max-width: calc(100% - 42px); padding: 12px; }
   .ai-composer { margin: 0 12px 14px; padding: 12px; }
-  .ai-expanded-content { grid-template-columns: 1fr; width: calc(100vw - 40px); }
+  .ai-expanded-content { grid-template-columns: 1fr; width: 100%; max-width: calc(100vw - 40px); }
   .ai-expanded-extra { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .ai-composer, .ai-drafts-grid td input, .ai-drafts-grid td select { transition: none; } }

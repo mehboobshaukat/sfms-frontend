@@ -24,6 +24,7 @@ import { Input } from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import { formatCurrency, formatDate, todayISODate } from "../lib/formatters";
 import { CREDIT_TYPES } from "../lib/constants";
+import useViewMode, { TABLE_QUERY } from "../lib/useViewMode";
 
 const TABS = [
   { key: "all", label: "All" },
@@ -43,10 +44,6 @@ const SORTS = [
   { key: "remaining", label: "Largest remaining" },
 ];
 
-const VIEW_KEY = "sfms-credit-view";
-const readView = () => {
-  try { return localStorage.getItem(VIEW_KEY) === "table" ? "table" : "list"; } catch { return "list"; }
-};
 
 const paidPercent = (r) => {
   const total = Number(r.total_amount) || 0;
@@ -65,7 +62,7 @@ export default function CreditPurchases() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
-  const [view, setView] = useState(readView);
+  const [view, changeView] = useViewMode("sfms-credit-view", { wide: "table", narrow: "list", query: TABLE_QUERY });
   const [totals, setTotals] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -169,10 +166,6 @@ export default function CreditPurchases() {
   const contactName = (slug) => allContacts.find((c) => c.slug === slug)?.name || contacts.find((c) => c.slug === slug)?.name || "—";
   const categoryName = (slug) => categories.find((c) => c.slug === slug)?.name || "";
 
-  const changeView = (next) => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage unavailable: choice just won't persist */ }
-  };
 
   // Counts and overview figures come from the full list, so they stay stable while you switch tabs.
   const inDirection = (r) => tab === "all" || r.credit_type === tab;
@@ -214,7 +207,7 @@ export default function CreditPurchases() {
   }, [items, tab, status, term, sort, allContacts, contacts, categories]);
 
   const actionButtons = (r) => (
-    <div className="flex justify-end gap-2">
+    <div className="sfms-actions justify-end">
       <Button size="sm" variant="secondary" onClick={() => openEdit(r)}>
         Edit
       </Button>
@@ -281,7 +274,7 @@ export default function CreditPurchases() {
       {/* ---------- toolbar ---------- */}
       <Card className="!p-3.5 sm:!p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="relative min-w-[200px] flex-1">
+          <label className="relative min-w-0 flex-1 basis-[200px]">
             <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               value={search}

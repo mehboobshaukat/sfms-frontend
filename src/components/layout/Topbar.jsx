@@ -36,9 +36,9 @@ export default function Topbar({ title, onMenuClick, actions }) {
 
   return (
     <header className="sfms-topbar sticky top-0 z-20 border-b border-cardBorder">
-      <div className="flex min-h-[68px] items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
+      <div className="flex min-h-[60px] items-center justify-between gap-2 px-3 sm:min-h-[68px] sm:gap-4 sm:px-6 xl:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <button onClick={onMenuClick} className="lg:hidden shrink-0 h-10 w-10 rounded-xl border border-cardBorder bg-btnSec flex items-center justify-center text-ink hover:bg-hover" aria-label="Open menu">
+          <button onClick={onMenuClick} className="lg:hidden shrink-0 h-11 w-11 sm:h-10 sm:w-10 rounded-xl border border-cardBorder bg-btnSec flex items-center justify-center text-ink hover:bg-hover" aria-label="Open menu">
             <Icon name="menu" size={19} />
           </button>
           <nav aria-label="Breadcrumb" className="min-w-0">
@@ -50,13 +50,13 @@ export default function Topbar({ title, onMenuClick, actions }) {
           </nav>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
           {actions}
           <span className="hidden md:inline-flex h-9 items-center gap-2 rounded-xl border border-cardBorder bg-card/70 px-3 text-xs font-semibold text-nav">
             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-[#17c8f2] to-[#1565ff]" />
             {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
           </span>
-          <Link to="/" title="Home" className="inline-flex h-9 items-center gap-2 rounded-xl border border-cardBorder bg-btnSec px-3 text-sm font-semibold text-muted no-underline transition hover:border-primary-border hover:bg-hover hover:text-primary">
+          <Link to="/" title="Home" className="inline-flex h-10 min-w-[40px] items-center justify-center gap-2 rounded-xl border border-cardBorder bg-btnSec px-2.5 text-sm font-semibold text-muted no-underline sm:h-9 sm:px-3 transition hover:border-primary-border hover:bg-hover hover:text-primary">
             <Icon name="home" size={17} />
             <span className="hidden lg:inline">Home</span>
           </Link>
@@ -64,7 +64,7 @@ export default function Topbar({ title, onMenuClick, actions }) {
             <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-[10px] font-bold text-primary border border-primary-border">{avatar ? <img src={avatar} alt="Profile" className="h-full w-full object-cover" /> : initials(name)}</span>
             <span className="max-w-[110px] truncate text-xs font-medium text-ink">{name}</span>
           </Link>
-          <button onClick={handleLogout} disabled={loggingOut} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cardBorder bg-btnSec px-3 text-sm font-semibold text-muted transition hover:border-danger/35 hover:bg-danger-soft hover:text-danger disabled:opacity-50" title="Log out">
+          <button onClick={handleLogout} disabled={loggingOut} className="inline-flex h-10 min-w-[40px] items-center justify-center gap-2 rounded-xl border border-cardBorder bg-btnSec px-2.5 text-sm font-semibold text-muted transition sm:h-9 sm:px-3 hover:border-danger/35 hover:bg-danger-soft hover:text-danger disabled:opacity-50" title="Log out">
             <Icon name="logout" size={17} />
             <span className="hidden md:inline">{loggingOut ? "Signing out…" : "Log out"}</span>
           </button>

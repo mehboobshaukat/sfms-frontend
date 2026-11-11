@@ -6,8 +6,8 @@ import Spinner from "../ui/Spinner";
 import EmptyState from "../ui/EmptyState";
 import Pagination from "../ui/Pagination";
 import useCountUp from "../../lib/useCountUp";
+import useViewMode, { TABLE_QUERY } from "../../lib/useViewMode";
 
-const VIEW_KEY = "sfms-settings-view";
 const AVATAR_TONES = [
   "bg-primary-soft text-primary",
   "bg-emerald-glow text-emerald",
@@ -18,9 +18,6 @@ const AVATAR_TONES = [
 ];
 const SEARCH_KEYS = ["name", "email", "phone_number", "account_label", "account_name", "nature", "description"];
 
-const readView = () => {
-  try { return localStorage.getItem(VIEW_KEY) === "table" ? "table" : "list"; } catch { return "list"; }
-};
 
 function initials(name) {
   const parts = String(name || "?").trim().split(/\s+/).slice(0, 2);
@@ -50,11 +47,11 @@ export function SettingsIntro({ icon, title, description, action }) {
           <Icon name={icon} size={22} strokeWidth={1.9} />
         </span>
         <div className="min-w-0">
-          <h3 className="font-display text-[1.15rem] font-extrabold tracking-[-0.025em] text-ink">{title}</h3>
+          <h3 className="break-words font-display text-[1.15rem] font-extrabold tracking-[-0.025em] text-ink">{title}</h3>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">{description}</p>
         </div>
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="w-full shrink-0 sm:w-auto [&>button]:w-full sm:[&>button]:w-auto">{action}</div>}
     </div>
   );
 }
@@ -79,7 +76,7 @@ function Stat({ label, value, tone }) {
  * Search and status filters work on the rows loaded on the current page.
  */
 export function SettingsPanel({ items, total, page, pageSize, loading, onPageChange, onPageSizeChange, columns, renderItem, emptyTitle, emptyDescription, emptyAction }) {
-  const [view, setView] = useState(readView);
+  const [view, changeView] = useViewMode("sfms-settings-view", { wide: "table", narrow: "list", query: TABLE_QUERY });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
 
@@ -104,10 +101,6 @@ export function SettingsPanel({ items, total, page, pageSize, loading, onPageCha
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [items, term, status]);
 
-  const changeView = (next) => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage unavailable */ }
-  };
 
   const chips = [
     ["all", "All", counts.all],
@@ -134,7 +127,7 @@ export function SettingsPanel({ items, total, page, pageSize, loading, onPageCha
 
       <Card className="!p-3.5 sm:!p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="relative min-w-[200px] flex-1">
+          <label className="relative min-w-0 flex-1 basis-[200px]">
             <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               value={search}
@@ -169,22 +162,22 @@ export function SettingsPanel({ items, total, page, pageSize, loading, onPageCha
         ) : (
           <CardBody className={`p-0 pt-2 transition-opacity duration-200 ${loading ? "pointer-events-none opacity-60" : ""}`}>
             {visible.length === 0 ? (
-              <div className="px-5 py-10 text-center text-sm text-muted">Nothing on this page matches your search or filter.</div>
+              <div className="px-4 py-10 text-center text-sm text-muted sm:px-5">Nothing on this page matches your search or filter.</div>
             ) : columns && view === "table" ? (
               <Table columns={columns} rows={visible} />
             ) : (
               <ul className="m-0 list-none divide-y divide-itemBorder border-t border-itemBorder p-0">
                 {visible.map((item) => (
-                  <li key={item.slug || item.id} className="group flex items-center gap-3.5 px-5 py-3.5 transition hover:bg-primary-soft/40">
+                  <li key={item.slug || item.id} className="group flex flex-wrap items-start gap-x-3.5 gap-y-3 px-4 py-3.5 transition hover:bg-primary-soft/40 sm:items-center sm:px-5">
                     <Avatar name={item.name} />
                     {renderItem ? (
-                      <div className="min-w-0 flex-1">{renderItem(item)}</div>
+                      <div className="min-w-0 flex-1 basis-[10rem]">{renderItem(item)}</div>
                     ) : (
                       <>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-bold text-ink">{titleColumn?.render ? titleColumn.render(item) : item.name}</div>
+                        <div className="min-w-0 flex-1 basis-[10rem]">
+                          <div className="break-words font-bold text-ink">{titleColumn?.render ? titleColumn.render(item) : item.name}</div>
                           {detailColumns.length > 0 && (
-                            <div className="mt-1.5 flex flex-wrap items-end gap-x-5 gap-y-2">
+                            <div className="mt-1.5 flex flex-wrap items-end gap-x-5 gap-y-2 [&>div]:min-w-0 [&>div]:max-w-full">
                               {detailColumns.map((c) => (
                                 <div key={c.key}>
                                   <p className="text-[10px] font-bold uppercase tracking-wide text-subtle">{c.header}</p>
@@ -194,7 +187,7 @@ export function SettingsPanel({ items, total, page, pageSize, loading, onPageCha
                             </div>
                           )}
                         </div>
-                        {actionsColumn && <div className="shrink-0">{actionsColumn.render(item)}</div>}
+                        {actionsColumn && <div className="w-full sm:w-auto sm:shrink-0">{actionsColumn.render(item)}</div>}
                       </>
                     )}
                   </li>
@@ -203,7 +196,7 @@ export function SettingsPanel({ items, total, page, pageSize, loading, onPageCha
             )}
           </CardBody>
         )}
-        <div className="px-5 pb-3">
+        <div className="px-4 pb-3 sm:px-5">
           {!loading && (
             <Pagination page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
           )}

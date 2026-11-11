@@ -453,7 +453,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#9fb6e3]">
               Usable balance across accounts <Icon name="info" size={14} />
             </div>
-            <p className="mt-2 font-display text-[2.5rem] sm:text-[3rem] font-extrabold leading-none tracking-[-0.05em]"><Money value={usableBalance} /></p>
+            <p className="mt-2 break-words font-display text-[2rem] min-[400px]:text-[2.5rem] sm:text-[3rem] font-extrabold leading-none tracking-[-0.05em]"><Money value={usableBalance} /></p>
             <p className="mt-2.5 text-[12px] text-[#b9cbee]">Total financial funds {formatCurrency(savingsSummary?.total_financial_funds ?? netWorth)} · Goal savings {formatCurrency(savingsSummary?.goal_savings)}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2.5 text-xs text-[#b9cbee]">
               <span className={`inline-flex items-center rounded-full px-2.5 py-1 font-bold ${heroChange >= 0 ? "bg-emerald/20 text-[#7ff0c4]" : "bg-danger/25 text-[#ffb3c0]"}`}>{heroChange >= 0 ? "↑ +" : "↓ "}{Math.round(heroChange)}%</span>
@@ -462,7 +462,7 @@ export default function Dashboard() {
               <span>{accounts.length} account{accounts.length === 1 ? "" : "s"}</span>
               <Link to="/accounts" className="font-semibold text-[#7ee3ff] no-underline hover:underline">Manage assets</Link>
             </div>
-            <div className="mt-auto grid grid-cols-3 gap-3 pt-5">
+            <div className="mt-auto grid grid-cols-1 gap-3 pt-5 min-[440px]:grid-cols-3">
               <div className="sfms-hero-stat"><p className="text-[11px] text-[#9fb6e3]">Inflow</p><p className="mt-1 truncate text-[15px] font-extrabold text-[#7ff0c4]"><Money value={inflowTotal} /></p></div>
               <div className="sfms-hero-stat"><p className="text-[11px] text-[#9fb6e3]">Outflow</p><p className="mt-1 truncate text-[15px] font-extrabold text-[#ffb3c0]"><Money value={outflowTotal} /></p></div>
               <div className="sfms-hero-stat"><p className="text-[11px] text-[#9fb6e3]">Net flow</p><p className={`mt-1 truncate text-[15px] font-extrabold ${netFlow >= 0 ? "text-white" : "text-[#ffb3c0]"}`}>{netFlow > 0 ? "+" : ""}<Money value={netFlow} /></p></div>
@@ -491,7 +491,7 @@ export default function Dashboard() {
       </section>
 
       {/* ---------- quick actions ---------- */}
-      <nav aria-label="Quick actions" className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <nav aria-label="Quick actions" className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 min-[380px]:max-md:[&>*:last-child:nth-child(odd)]:col-span-2">
         {QUICK_ACTIONS.map((q) => (
           <Link key={q.to} to={q.to} className="group flex items-center gap-3 rounded-2xl border border-cardBorder bg-card p-3.5 no-underline shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-primary-border hover:shadow-float">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#17c8f2] to-[#1565ff] text-white shadow-luxury transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"><Icon name={q.icon} size={19} /></span>

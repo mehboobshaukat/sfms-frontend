@@ -22,6 +22,7 @@ import StatTile from "../components/ui/StatTile";
 import useCountUp from "../lib/useCountUp";
 import { formatCurrency, formatDate, todayISODate } from "../lib/formatters";
 import { BUDGET_PERIODS } from "../lib/constants";
+import useViewMode, { CARDS_QUERY } from "../lib/useViewMode";
 
 const emptyForm = { category_slug: "", period: "monthly", amount: "", start_date: todayISODate(), end_date: "" };
 
@@ -48,10 +49,6 @@ const STATUS_META = {
   over: { label: "Over budget", badge: "danger", text: "text-danger", tone: "danger", chip: "bg-danger-soft text-danger" },
 };
 
-const VIEW_KEY = "sfms-budgets-view";
-const readView = () => {
-  try { return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "cards"; } catch { return "cards"; }
-};
 
 /** Usage figures for one budget, worked out here because the server sends only amount and spent. */
 function usage(b) {
@@ -76,7 +73,7 @@ export default function Budgets() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("usage");
-  const [view, setView] = useState(readView);
+  const [view, changeView] = useViewMode("sfms-budgets-view", { wide: "cards", narrow: "list", query: CARDS_QUERY });
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -156,10 +153,6 @@ export default function Budgets() {
     }
   };
 
-  const changeView = (next) => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage unavailable: choice just won't persist */ }
-  };
 
   // Overview and health describe the budgets that apply right now.
   const live = items.filter((b) => currentSlugs.has(b.slug));
@@ -195,7 +188,7 @@ export default function Budgets() {
   }, [items, currentSlugs, scope, period, status, term, sort, allCategories, categories]);
 
   const actionButtons = (b) => (
-    <div className="flex gap-2">
+    <div className="sfms-actions">
       <Button size="sm" variant="secondary" onClick={() => openEdit(b)}>Edit</Button>
       <Button size="sm" variant="danger" onClick={() => deleteGuard.request(b.slug, `budget for "${categoryName(b.category_slug)}"`)}>Delete</Button>
     </div>
@@ -243,7 +236,7 @@ export default function Budgets() {
                   <div className="absolute inset-[10px] rounded-full bg-card" />
                   <span className="relative font-display text-[1.45rem] font-extrabold tracking-[-0.03em] text-ink"><Percent value={overallPercent} /></span>
                 </div>
-                <div className="min-w-[220px] flex-1">
+                <div className="min-w-0 flex-1 basis-[220px]">
                   <h3 className="font-display text-[1.05rem] font-bold tracking-[-0.02em] text-ink">Budget health</h3>
                   <p className="mt-0.5 text-sm text-muted">
                     {formatCurrency(totalSpent)} spent of {formatCurrency(totalBudgeted)} across your current budgets.
@@ -268,7 +261,7 @@ export default function Budgets() {
           {/* ---------- toolbar ---------- */}
           <Card className="!p-3.5 sm:!p-4">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="relative min-w-[200px] flex-1">
+              <label className="relative min-w-0 flex-1 basis-[200px]">
                 <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by category…" aria-label="Search budgets" className="h-11 w-full rounded-xl border border-cardBorder bg-input pl-10 pr-10 text-sm text-ink outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/15" />
                 {search && <button type="button" onClick={() => setSearch("")} aria-label="Clear search" className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-lg leading-none text-muted hover:bg-hover hover:text-ink">×</button>}

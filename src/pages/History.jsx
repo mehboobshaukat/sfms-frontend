@@ -200,7 +200,7 @@ export default function History() {
       {/* ---------- toolbar ---------- */}
       <Card className="!p-3.5 sm:!p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="relative min-w-[200px] flex-1">
+          <label className="relative min-w-0 flex-1 basis-[200px]">
             <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               value={search}
@@ -244,7 +244,7 @@ export default function History() {
             ) : (
               groups.map((group) => (
                 <section key={group.date} aria-label={group.date === "unknown" ? "Earlier" : dayLabel(group.date)}>
-                  <div className="flex items-center justify-between gap-3 border-y border-itemBorder bg-primary-soft/50 px-5 py-2">
+                  <div className="flex items-center justify-between gap-3 border-y border-itemBorder bg-primary-soft/50 px-4 py-2 sm:px-5">
                     <h3 className="font-display text-[12px] font-extrabold uppercase tracking-[0.08em] text-nav">{group.date === "unknown" ? "Earlier" : dayLabel(group.date)}</h3>
                     <span className="text-[11px] font-bold text-muted">{group.entries.length} {group.entries.length === 1 ? "change" : "changes"}</span>
                   </div>
@@ -253,8 +253,8 @@ export default function History() {
                       const style = ACTION_STYLE[h.action] || ACTION_STYLE.update;
                       const kept = daysKept(h.created_at);
                       return (
-                        <li key={h.slug} className={`group flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-3.5 transition hover:bg-primary-soft/40 ${h.is_undone ? "opacity-70" : ""}`}>
-                          <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                        <li key={h.slug} className={`group flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5 transition hover:bg-primary-soft/40 ${h.is_undone ? "opacity-70" : ""}`}>
+                          <div className="flex min-w-0 flex-1 basis-[14rem] items-center gap-3.5">
                             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3 ${style.chip}`}>
                               <ActionIcon action={h.action} />
                             </span>
@@ -271,13 +271,13 @@ export default function History() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-3">
+                          <div className="flex w-full items-center gap-3 sm:w-auto sm:shrink-0">
                             {kept !== null && !h.is_undone && (
                               <span className={`hidden text-[11px] font-semibold md:inline ${kept <= 3 ? "text-gold" : "text-muted"}`} title="Entries are kept for 30 days">
                                 {kept === 0 ? "Expires today" : `${kept} day${kept === 1 ? "" : "s"} left`}
                               </span>
                             )}
-                            <div className="flex gap-2">
+                            <div className="sfms-actions flex-1 sm:flex-none">
                               {!h.is_undone && (
                                 <Button size="sm" variant="secondary" onClick={() => setUndoTarget(h)}>Undo</Button>
                               )}

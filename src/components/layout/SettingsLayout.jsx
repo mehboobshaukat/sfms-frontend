@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import PageHeader from "../ui/PageHeader";
 import Icon from "../ui/Icon";
 
@@ -13,6 +13,14 @@ const TABS = [
 ];
 
 export default function SettingsLayout() {
+  const pillsRef = useRef(null);
+  const { pathname } = useLocation();
+  // On phones the pills scroll sideways: bring the active one into view so it is never half cut off.
+  useEffect(() => {
+    const active = pillsRef.current?.querySelector('[aria-current="page"]');
+    if (active?.scrollIntoView) active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [pathname]);
+
   return (
     <div>
       <PageHeader
@@ -22,7 +30,7 @@ export default function SettingsLayout() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[272px_minmax(0,1fr)]">
         {/* small screens: scrolling pills */}
-        <nav aria-label="Settings sections" className="sfms-noscroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
+        <nav ref={pillsRef} aria-label="Settings sections" className="sfms-noscroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
           {TABS.map((t) => (
             <NavLink
               key={t.to}
