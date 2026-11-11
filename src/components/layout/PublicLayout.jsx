@@ -86,21 +86,23 @@ export default function PublicLayout() {
       <footer className="pl-ft">
         <GridBackdrop tone={0.8} />
         <div className="pl-ft-in">
-          <div>
+          <div className="pl-ft-brandcol">
             <Brand />
             <p>One ledger for your income, expenses, loans, credit purchases, budgets and savings goals.</p>
+            <div className="pl-ft-dev"><DeveloperBadge /></div>
           </div>
-          <nav aria-label="Explore"><h4>Explore</h4><ul>{LINKS.slice(0, 3).map((l) => <li key={l.to}><Link to={l.to}>{l.label}</Link></li>)}</ul></nav>
-          <nav aria-label="Company"><h4>Company</h4><ul>{LINKS.slice(3).map((l) => <li key={l.to}><Link to={l.to}>{l.label}</Link></li>)}</ul></nav>
-          <nav aria-label="Account"><h4>Account</h4>
+          <div className="pl-ft-links">
+          <nav className="pl-ft-ex" aria-label="Explore"><h4>Explore</h4><ul>{LINKS.slice(0, 3).map((l) => <li key={l.to}><Link to={l.to}>{l.label}</Link></li>)}</ul></nav>
+          <nav className="pl-ft-co" aria-label="Company"><h4>Company</h4><ul>{LINKS.slice(3).map((l) => <li key={l.to}><Link to={l.to}>{l.label}</Link></li>)}</ul></nav>
+          <nav className="pl-ft-ac" aria-label="Account"><h4>Account</h4>
             <ul>
               {isAuthenticated
                 ? <><li><Link to="/dashboard">Dashboard</Link></li><li><button type="button" className="pl-flink" onClick={signOut} disabled={busy}>{busy ? "Signing out…" : "Log out"}</button></li></>
                 : <><li><Link to="/login">Log in</Link></li><li><Link to="/register">Create account</Link></li></>}
             </ul>
           </nav>
+          </div>
         </div>
-        <div className="pl-ft-dev"><DeveloperBadge /></div>
         <div className="pl-ft-b">
           <span>© {new Date().getFullYear()} SFMS — Self Finance Management System.</span>
           <span>Illustrative sample data is used on marketing pages.</span>
