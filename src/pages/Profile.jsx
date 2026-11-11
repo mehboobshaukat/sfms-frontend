@@ -13,6 +13,7 @@ import Badge from "../components/ui/Badge";
 import { Input } from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
 import LocationFields from "../components/location/LocationFields";
+import Avatar from "../components/ui/Avatar";
 
 const DELETION_OPTIONS = [
   {
@@ -232,7 +233,7 @@ export default function Profile() {
         <Card>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft border border-primary-border text-2xl font-bold text-primary">
-              {avatar ? <img src={avatar} alt="Profile" className="h-full w-full object-cover" /> : initials(name)}
+              <Avatar src={avatar} alt="Profile" fallback={initials(name)} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">

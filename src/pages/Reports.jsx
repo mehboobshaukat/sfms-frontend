@@ -200,10 +200,12 @@ export default function Reports() {
               </button>
             ))}
           </div>
-          <form onSubmit={generate} className="flex flex-col items-end gap-4 sm:flex-row">
-            <Input label="From" type="date" required value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPreset(""); }} className="max-w-xs" />
-            <Input label="To" type="date" required value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPreset(""); }} className="max-w-xs" />
-            <Button type="submit" variant="luxury" loading={loading}>Generate Report</Button>
+          <form onSubmit={generate} className="grid grid-cols-2 items-end gap-3 max-[339px]:grid-cols-1 sm:grid-cols-[repeat(2,minmax(0,14rem))_auto] sm:justify-start sm:gap-4">
+            <Input label="From" type="date" required value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPreset(""); }} className="min-w-0 !px-2.5 sm:!px-3.5" />
+            <Input label="To" type="date" required value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPreset(""); }} className="min-w-0 !px-2.5 sm:!px-3.5" />
+            <div className="col-span-2 max-[339px]:col-span-1 sm:col-span-1 [&>button]:w-full sm:[&>button]:w-auto">
+              <Button type="submit" variant="luxury" loading={loading}>Generate Report</Button>
+            </div>
           </form>
         </CardBody>
       </Card>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Line, Doughnut } from "react-chartjs-2";
@@ -28,6 +28,7 @@ import { formatCurrency, formatDate, txnDisplayAmount } from "../lib/formatters"
 import { DATE_RANGES } from "../lib/constants";
 import useCountUp from "../lib/useCountUp";
 import "./Dashboard.css";
+import Avatar from "../components/ui/Avatar";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ArcElement, Tooltip, Legend, Filler);
 
@@ -118,7 +119,18 @@ function DashboardHeader({ user }) {
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const menuRef = useRef(null);
   const avatar = profileImage(user);
+
+  // Close the profile menu on outside tap or Esc.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onDown = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [menuOpen]);
   const name = displayName(user);
 
   const doSearch = (event) => {
@@ -150,8 +162,8 @@ function DashboardHeader({ user }) {
         <span aria-hidden="true" className="mt-3 block h-1 w-14 rounded-full bg-gradient-to-r from-[#1565ff] to-[#17c8f2]" />
       </div>
 
-      <div className="flex flex-wrap items-center justify-start gap-2.5 lg:justify-end">
-        <form onSubmit={doSearch} className="relative w-full sm:w-[360px] xl:w-[440px]">
+      <div className="flex w-full min-w-0 items-center gap-2.5 lg:w-auto lg:justify-end">
+        <form onSubmit={doSearch} className="relative min-w-0 flex-1 lg:w-[360px] lg:flex-none xl:w-[440px]">
           <Icon name="search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
           <input
             value={query}
@@ -167,27 +179,29 @@ function DashboardHeader({ user }) {
           <span className="absolute right-[7px] top-[6px] h-2.5 w-2.5 rounded-full border-2 border-card bg-danger" />
         </button> */}
 
-        <div className="relative">
+        <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="flex h-10 items-center gap-2 rounded-full border border-transparent bg-transparent pl-1 pr-1.5 text-nav hover:bg-hover"
             aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            aria-label="Account menu"
           >
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-primary-border bg-primary-soft text-xs font-bold text-primary">
-              {avatar ? <img src={avatar} alt="Profile" className="h-full w-full object-cover" /> : initials(name)}
+              <Avatar src={avatar} alt="Profile" fallback={initials(name)} />
             </span>
             <Icon name="arrowDown" size={14} />
           </button>
 
           {menuOpen && (
-            <div className="sfms-float absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-xl border border-cardBorder bg-card p-1.5">
+            <div className="sfms-float absolute right-0 top-12 z-50 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-cardBorder bg-card p-1.5">
               <div className="border-b border-itemBorder px-3 py-2.5">
                 <p className="truncate text-xs font-semibold text-ink">{name}</p>
                 <p className="mt-0.5 truncate text-[11px] text-muted">{user?.email || "Account"}</p>
               </div>
-              <Link to="/" title="Home" className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-nav no-underline hover:bg-hover hover:text-ink">
+              <Link to="/" title="Home" className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-nav no-underline hover:bg-hover hover:text-ink" onClick={() => setMenuOpen(false)}>
                 <Icon name="home" size={17} />
-                <span className="hidden lg:inline">Home</span>
+                <span>Home</span>
               </Link>
               <Link to="/profile" className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-nav no-underline hover:bg-hover hover:text-ink" onClick={() => setMenuOpen(false)}>
                 <Icon name="profile" size={16} /> Profile

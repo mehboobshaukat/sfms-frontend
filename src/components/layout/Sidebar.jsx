@@ -7,6 +7,7 @@ import { isAdminRole, roleLabel } from "../../lib/roles";
 import logo from "../../pages/assets/SFMS_logo_transparent.png";
 import wordmark from "../../pages/assets/sfms-wordmark-light.png";
 import "./AppShell.css";
+import Avatar from "../ui/Avatar";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: "dashboard" },
@@ -79,7 +80,7 @@ export default function Sidebar({ onNavigate }) {
       >
         <div className="flex items-center gap-3 px-3.5 py-3.5">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/10 text-sm font-bold text-white">
-            {avatar ? <img src={avatar} alt="Profile" className="h-full w-full object-cover" /> : initials(name)}
+            <Avatar src={avatar} alt="Profile" fallback={initials(name)} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-white">{name}</p>
