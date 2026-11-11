@@ -7,6 +7,7 @@ import logo from "../../pages/assets/SFMS_logo_transparent.png";
 import wordmarkDark from "../../pages/assets/sfms-wordmark.png";
 import wordmarkLight from "../../pages/assets/sfms-wordmark-light.png";
 import GridBackdrop from "../ui/GridBackdrop";
+import DeveloperBadge from "../ui/DeveloperBadge";
 import "./PublicLayout.css";
 
 const LINKS = [
@@ -99,6 +100,7 @@ export default function PublicLayout() {
             </ul>
           </nav>
         </div>
+        <div className="pl-ft-dev"><DeveloperBadge /></div>
         <div className="pl-ft-b">
           <span>© {new Date().getFullYear()} SFMS — Self Finance Management System.</span>
           <span>Illustrative sample data is used on marketing pages.</span>

@@ -1,0 +1,81 @@
+/* Developer credit badge (footer). Everything is sized in em, so one font-size on .ms-badge scales the whole
+   badge from small phones to large desktops. Colors follow the SFMS navy / cyan / blue family. */
+.ms-badge, .ms-badge * { box-sizing: border-box; }
+.ms-badge {
+  --ms-cyan: #17c8f2; --ms-blue: #1565ff;
+  position: relative; display: inline-flex; align-items: center; max-width: 100%;
+  font-size: clamp(12px, 0.55vw + 10px, 17px);
+  text-decoration: none; color: #fff; white-space: nowrap; -webkit-tap-highlight-color: transparent;
+}
+/* Pill */
+.ms-pill {
+  position: relative; display: grid; gap: 0.28em; min-width: 0;
+  margin-left: -2.5em; padding: 0.7em 1.7em 0.7em 3.3em;
+  border-radius: 999px; border: 1px solid transparent;
+  background:
+    linear-gradient(135deg, #040d22, #081c47) padding-box,
+    linear-gradient(110deg, var(--ms-cyan), var(--ms-blue) 60%, #0a47d6) border-box;
+  box-shadow: 0 10px 28px rgba(0, 10, 40, 0.45), 0 0 0 1px rgba(21, 101, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: box-shadow 0.35s ease, transform 0.35s ease;
+}
+.ms-by {
+  position: relative; padding-bottom: 0.32em; font-size: 0.78em; font-weight: 600; line-height: 1.1; letter-spacing: 0.02em; color: #d6e3ff;
+}
+.ms-by::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, rgba(200, 216, 245, 0.55), rgba(200, 216, 245, 0.08));
+}
+.ms-nm {
+  font-family: var(--pl-display, "Plus Jakarta Sans", Inter, "Segoe UI", system-ui, sans-serif);
+  font-size: 1.28em; font-weight: 800; line-height: 1.1; letter-spacing: -0.015em; color: #fff;
+}
+.ms-nm b {
+  font-weight: 800;
+  background: linear-gradient(100deg, #3fd6ff, #1a8cff 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+}
+
+/* Avatar: blue ring > light ring > stage that holds the two images */
+.ms-av {
+  position: relative; z-index: 1; flex: none; width: 5em; height: 5em; padding: 0.22em; border-radius: 50%;
+  background: linear-gradient(140deg, #5be0ff, #1f86ff 55%, #3a96ff);
+  box-shadow: 0 8px 22px rgba(0, 10, 40, 0.5), 0 0 22px rgba(23, 200, 242, 0.28);
+  transition: box-shadow 0.35s ease, transform 0.35s ease;
+}
+.ms-av-w { display: block; width: 100%; height: 100%; padding: 0.17em; border-radius: 50%; background: #f4f8ff; }
+.ms-av-s { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; background: #f4f8ff; isolation: isolate; }
+.ms-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; user-select: none; -webkit-user-drag: none; will-change: opacity, transform; }
+.ms-photo { object-position: 50% 30%; animation: ms-photo 10s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+.ms-logo { animation: ms-logo 10s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+
+/* 10s loop: photo ~4s, soft cross-fade ~1s, logo ~4s, soft cross-fade ~1s */
+@keyframes ms-photo {
+  0%, 40% { opacity: 1; transform: scale(1); }
+  50%, 90% { opacity: 0; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ms-logo {
+  0%, 40% { opacity: 0; transform: scale(0.84) rotate(-6deg); }
+  50%, 90% { opacity: 1; transform: scale(1) rotate(0); }
+  100% { opacity: 0; transform: scale(0.84) rotate(-6deg); }
+}
+
+/* Interaction */
+.ms-badge:hover .ms-pill, .ms-badge:focus-visible .ms-pill { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0, 10, 40, 0.55), 0 0 0 1px rgba(23, 200, 242, 0.3), 0 0 26px rgba(21, 101, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+.ms-badge:hover .ms-av, .ms-badge:focus-visible .ms-av { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 26px rgba(0, 10, 40, 0.55), 0 0 28px rgba(23, 200, 242, 0.45); }
+.ms-badge:hover .ms-img, .ms-badge:focus-visible .ms-img { animation-play-state: paused; }
+a.ms-badge:focus-visible { outline: 3px solid rgba(23, 200, 242, 0.7); outline-offset: 4px; border-radius: 999px; }
+
+/* Very small screens: tighten the pill a little so the badge never overflows */
+@media (max-width: 360px) {
+  .ms-badge { font-size: 11.5px; }
+  .ms-pill { padding-right: 1.3em; }
+}
+/* Large screens: a touch more presence */
+@media (min-width: 1600px) { .ms-badge { font-size: 18px; } }
+
+/* Reduced motion: no cross-fade, show the MS mark, no hover movement */
+@media (prefers-reduced-motion: reduce) {
+  .ms-photo { display: none; }
+  .ms-logo { animation: none; opacity: 1; transform: none; }
+  .ms-badge:hover .ms-pill, .ms-badge:hover .ms-av, .ms-badge:focus-visible .ms-pill, .ms-badge:focus-visible .ms-av { transform: none; }
+}
