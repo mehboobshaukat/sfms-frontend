@@ -91,9 +91,9 @@
     .pl-ft-brandcol > .pl-brand { grid-column: 1 / -1; order: 1; margin-bottom: -14px; }
     .pl-ft-brandcol > p { grid-column: 1 / -1; order: 2; margin-top: 0; max-width: none; }
     .pl-ft-co { order: 3; }
-    .pl-ft-ac { order: 4; }
+    .pl-ft-ac { order: 4; text-align: center;}
     .pl-ft-ex { order: 5; }
-    .pl-ft-brandcol > .pl-ft-dev { order: 6; align-self: center; justify-content: flex-start; margin-top: 0; container-type: inline-size; min-width: 0; }
+    .pl-ft-brandcol > .pl-ft-dev { order: 6; align-self: center; justify-content: center; margin-top: 0; container-type: inline-size; min-width: 0; }
     /* badge scales to the width of its cell; slightly more compact proportions */
     .pl-ft-dev .ms-badge { font-size: min(14px, 5.6cqw); }
     .pl-ft-dev .ms-av { width: 4.4em; height: 4.4em; }
