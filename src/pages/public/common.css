@@ -162,7 +162,8 @@
   .cbox > * { position: relative; }
   .cbox h2 { margin: 0 0 8px; color: #fff; }
   .cbox p { opacity: 0.9; }
-  .cbox .cta { margin: 0; }
+  .cbox .cta { margin: 0; flex-wrap: nowrap; flex: none; }
+  .cbox > div:first-child { min-width: 0; }
   /* Responsive */
   @media (max-width: 1020px) {
     .hgrid { grid-template-columns: minmax(0, 1fr); }
@@ -192,6 +193,54 @@
     .c2 { bottom: -14px; left: -8px; }
     .emblem { width: 56px; right: -8px; bottom: -26px; }
     .sec { padding: 60px 0; }
+  }
+  /* ---------- Compact layout for tablets and phones ---------- */
+  /* Call-to-action band stacks earlier so its buttons always get a full row */
+  @media (max-width: 900px) {
+    .cbox { flex-direction: column; align-items: flex-start; gap: 22px; padding: 36px 28px; }
+    .cbox .cta { width: 100%; }
+  }
+  @media (max-width: 640px) {
+    /* Buttons: always one row; they share the width and shrink their text and padding to fit */
+    .cta { flex-wrap: nowrap; gap: 10px; }
+    .cta > .btn { flex: 1 1 0; min-width: 0; white-space: nowrap; }
+    .cta > .btn.lg { min-height: 48px; padding: 10px 12px; gap: 6px; border-radius: 12px; font-size: clamp(0.72rem, 3.3vw, 0.9rem); }
+    .cta > .btn svg { flex: none; width: 15px; height: 15px; }
+    .cbox { padding: 30px 22px; }
+    .cbox .cta { margin-top: 4px; }
+
+    /* Cards: icon + category + heading share one row, the description sits underneath */
+    /* Front and back faces share one grid cell, so every card is exactly as tall as its taller face */
+    .flip { height: auto; }
+    .fin { display: grid; height: auto; }
+    .face { position: relative; inset: auto; grid-area: 1 / 1; }
+    .face:not(.bk) { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; column-gap: 12px; row-gap: 0; padding: 16px 18px; border-radius: 18px; }
+    .face:not(.bk) > .ico { grid-column: 1; grid-row: 1 / span 2; align-self: center; width: 40px; height: 40px; border-radius: 12px; }
+    .face:not(.bk) > .ico svg { width: 20px; height: 20px; }
+    .face:not(.bk) > .cat { grid-column: 2; grid-row: 1; align-self: end; font-size: 0.7rem; line-height: 1.2; letter-spacing: 0.02em; }
+    .face:not(.bk) > h3 { grid-column: 2; grid-row: 2; align-self: center; font-size: 1rem; line-height: 1.22; }
+    .face:not(.bk):not(:has(> .cat)) > h3 { grid-row: 1 / span 2; }
+    .face:not(.bk) > p { grid-column: 1 / -1; grid-row: 3; align-self: start; margin-top: 10px; font-size: 0.86rem; line-height: 1.5; }
+    .face:not(.bk) > .more { grid-column: 1 / -1; grid-row: 4; margin-top: 8px; }
+    .face.bk { gap: 4px; padding: 16px 18px; border-radius: 18px; }
+    .bk h4 { margin-bottom: 2px; font-size: 0.8rem; }
+    .bk div { padding: 7px 0; font-size: 0.85rem; }
+    .sgrid .scard, .ab-grid .ab-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; padding: 16px 18px; border-radius: 16px; }
+    .sgrid .scard .ico, .ab-grid .ab-card .ico { width: 40px; height: 40px; margin: 0; border-radius: 12px; }
+    .sgrid .scard .ico svg, .ab-grid .ab-card .ico svg { width: 20px; height: 20px; }
+    .sgrid .scard h3, .ab-grid .ab-card h3 { margin: 0; font-size: 1rem; line-height: 1.25; }
+    .sgrid .scard p, .ab-grid .ab-card p { grid-column: 1 / -1; margin-top: 10px; font-size: 0.86rem; line-height: 1.5; }
+    .sgrid, .ab-grid { gap: 12px; }
+    .fgrid { gap: 14px; }
+  }
+  @media (max-width: 380px) {
+    .cta > .btn.lg { padding: 10px 8px; gap: 5px; font-size: 0.72rem; }
+    .cta > .btn svg { width: 14px; height: 14px; }
+    .cbox { padding: 28px 16px; }
+  }
+  /* Very narrow phones: drop the little arrow / play icons so both labels still fit on one row */
+  @media (max-width: 340px) {
+    .cta > .btn svg { display: none; }
   }
   @media (hover: none) {
     .glow { display: none; }

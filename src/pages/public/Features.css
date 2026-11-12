@@ -108,7 +108,7 @@
   .cc.us li svg { background: var(--green); color: #fff; }
 
   @media (max-width: 1020px) { .ai-band, .ovw { grid-template-columns: 1fr; } .ovg { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 640px) { .ovg, .cmp { grid-template-columns: 1fr; } .ai-band { padding: 24px; } &.pg-features .flip { height: 300px; } }
+  @media (max-width: 640px) { .ovg, .cmp { grid-template-columns: 1fr; } .ai-band { padding: 24px; } &.pg-features .flip { height: auto; } &.pg-features .fgrid .face { gap: 0 12px; padding: 16px 18px; } &.pg-features .fgrid .face.bk { gap: 4px; } }
   @media (max-width: 720px) {
     .wf { --orb: 92px; row-gap: 18px; grid-template-columns: 1fr; padding-left: 10px; }
     .wb { top: 14px; right: auto; bottom: 14px; left: calc(var(--orb) / 2); width: 20px; height: auto; }
