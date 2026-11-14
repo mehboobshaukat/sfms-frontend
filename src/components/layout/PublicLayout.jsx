@@ -6,7 +6,7 @@ import Icon from "../ui/Icon";
 import logo from "../../pages/assets/SFMS_logo_transparent.png";
 import wordmarkDark from "../../pages/assets/sfms-wordmark.png";
 import wordmarkLight from "../../pages/assets/sfms-wordmark-light.png";
-import GridBackdrop from "../ui/GridBackdrop";
+// import GridBackdrop from "../ui/GridBackdrop";
 import DeveloperBadge from "../ui/DeveloperBadge";
 import "./PublicLayout.css";
 
@@ -84,7 +84,7 @@ export default function PublicLayout() {
       <main className="flex-1"><Outlet /></main>
 
       <footer className="pl-ft">
-        <GridBackdrop tone={0.8} />
+        {/* <GridBackdrop tone={0.8} /> */}
         <div className="pl-ft-in">
           <div className="pl-ft-brandcol">
             <Brand />

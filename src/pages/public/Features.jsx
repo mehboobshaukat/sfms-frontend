@@ -125,7 +125,7 @@ export default function Features() {
             <p className="lead">From one expense to your entire financial picture, SFMS connects the details that matter, without making you manage separate ledgers.</p>
             <div className="cta">
               <SingleStartLink className="btn pri lg" outClass="btn out lg" free />
-              <a className="btn out lg" href="#how"><Ic n="play" s={16} /> See how it works</a>
+              <a className="btn out lg" href="/how-it-works"><Ic n="play" s={16} /> See how it works</a>
             </div>
             <div className="ticks">{["One connected ledger", "Review before AI posting", "Accounts and goals in sync"].map((t) => <span key={t}><Ic n="check" s={16} />{t}</span>)}</div>
           </div>

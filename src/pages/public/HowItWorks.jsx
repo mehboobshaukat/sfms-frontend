@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../../components/Seo";
 import { Ic, useFx, Faq, CtaF, StartLink, SingleStartLink } from "./sfmsUi";
@@ -38,6 +38,19 @@ const SIM = [
     { i: "pie", l: "Food budget used", from: 4700, to: 3200, total: 10000, d: "−1,500", k: "up" },
     { i: "undo", l: "History", note: "Undo is available for 30 days." }] },
 ];
+
+/* True while the viewport matches the query (used to switch the journey to its phone layout). */
+function useMedia(query) {
+  const get = () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(query).matches;
+  const [on, setOn] = useState(get);
+  useEffect(() => {
+    const m = window.matchMedia(query), f = () => setOn(m.matches);
+    f();
+    m.addEventListener ? m.addEventListener("change", f) : m.addListener(f);
+    return () => (m.removeEventListener ? m.removeEventListener("change", f) : m.removeListener(f));
+  }, [query]);
+  return on;
+}
 
 /* Counts from the old value to the new one, after an optional delay (jumps straight there if motion is reduced). */
 function Tween({ from, to, delay = 0 }) {
@@ -91,7 +104,30 @@ export default function HowItWorks() {
     return () => clearTimeout(t);
   }, [step, pause]);
 
+  /* Phones: the detail panel opens directly under the selected step (with its progress bar), instead of far below the list. */
+  const narrow = useMedia("(max-width: 1020px)");
+  const listRef = useRef(), manual = useRef(false), mounted = useRef(false);
+  const pick = (i) => { manual.current = true; setStep(i); };
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    const byTap = manual.current; manual.current = false;
+    if (!narrow || !listRef.current) return;
+    const el = listRef.current.querySelector(".hw-step.on"); if (!el) return;
+    const r = listRef.current.getBoundingClientRect(), visible = r.bottom > 0 && r.top < window.innerHeight;
+    // Always follow a tap; follow the automatic tour only when it wraps back to step 1 while the list is on screen.
+    if (byTap || (step === 0 && visible)) el.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, [step]);
+
   const J = JOURNEY[step], S = SIM[fx];
+  const panel = (
+    <div className="hw-panel" key={step}>
+      <span className="ico"><Ic n={J[0]} s={26} /></span>
+      <h3>{J[1]}</h3><p>{J[2]}</p>
+      <div className="hw-tags">{J[3].map((t) => <span key={t}>{t}</span>)}</div>
+      <div>{J[4].map(([a, b], i) => <div className="hw-row" key={a} style={{ "--i": i }}><span>{a}</span><b>{b}</b></div>)}</div>
+      <small className="hw-ill">Illustrative example, not live data</small>
+    </div>
+  );
   return (
     <div className="sfms-home" ref={root} onMouseMove={move}>
       <Seo title="How It Works" description="See how SFMS works: create an account, set up accounts and categories, record transactions manually or with AI, keep balances, loans and budgets in sync, and review reports with 30-day undo." path="/how-it-works" />
@@ -108,22 +144,19 @@ export default function HowItWorks() {
       </div></section>
 
       <section className="sec"><div className="wrap">
-        <div className="sh c rv"><span className="tag">The journey</span><h2>Your first day with SFMS</h2><p>Pick a step to see what happens. The tour moves on by itself and pauses while you hover.</p></div>
-        <div className="hw-jr rv" onMouseEnter={() => setPause(true)} onMouseLeave={() => setPause(false)}>
-          <div className="hw-list">
+        <div className="sh c rv"><span className="tag">The journey</span><h2>Your first day with SFMS</h2><p>{narrow ? "Tap a step to see what happens. The tour moves on by itself until you tap one." : "Pick a step to see what happens. The tour moves on by itself and pauses while you hover."}</p></div>
+        <div className="hw-jr rv" onPointerEnter={(e) => e.pointerType === "mouse" && setPause(true)} onPointerLeave={(e) => e.pointerType === "mouse" && setPause(false)}>
+          <div className="hw-list" ref={listRef}>
             {JOURNEY.map(([n, t], i) => (
-              <button key={t} className={"hw-step" + (i === step ? " on" : "") + (pause ? " hold" : "")} onClick={() => setStep(i)} aria-pressed={i === step}>
-                <span className="ico"><Ic n={n} /></span><span><b>{i + 1}. {t}</b><small>{i === step ? "Selected" : "Tap to preview"}</small></span>
-              </button>
+              <Fragment key={t}>
+                <button className={"hw-step" + (i === step ? " on" : "") + (pause ? " hold" : "")} onClick={() => pick(i)} aria-pressed={i === step} aria-expanded={narrow ? i === step : undefined}>
+                  <span className="ico"><Ic n={n} /></span><span><b>{i + 1}. {t}</b><small>{i === step ? "Selected" : "Tap to preview"}</small></span>
+                </button>
+                {narrow && i === step && panel}
+              </Fragment>
             ))}
           </div>
-          <div className="hw-panel" key={step}>
-            <span className="ico"><Ic n={J[0]} s={26} /></span>
-            <h3>{J[1]}</h3><p>{J[2]}</p>
-            <div className="hw-tags">{J[3].map((t) => <span key={t}>{t}</span>)}</div>
-            <div>{J[4].map(([a, b], i) => <div className="hw-row" key={a} style={{ "--i": i }}><span>{a}</span><b>{b}</b></div>)}</div>
-            <small className="hw-ill">Illustrative example, not live data</small>
-          </div>
+          {!narrow && panel}
         </div>
       </div></section>
 

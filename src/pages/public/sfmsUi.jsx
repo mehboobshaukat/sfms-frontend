@@ -136,7 +136,7 @@ export function CtaHIW({ title, text }) {
     <section className="cta-b"><div className="wrap">
       <div className="cbox rv">
         <div><h2>{title}</h2><p>{text}</p></div>
-        <div className="cta"><SingleStartLink className="btn wht lg" outClass="btn line lg" free /><Link className="btn line lg" to="/features"><Ic n="play" s={16} /> See how it works</Link></div>
+        <div className="cta"><SingleStartLink className="btn wht lg" outClass="btn line lg" free /><Link className="btn line lg" to="/how-it-works"><Ic n="play" s={16} /> See how it works</Link></div>
       </div>
     </div></section>
   );
