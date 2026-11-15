@@ -41,6 +41,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const AdminMessages = lazy(() => import("./pages/admin/Messages"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminAdmins = lazy(() => import("./pages/admin/Admins"));
+const AdminNotifications = lazy(() => import("./pages/admin/Notifications"));
 
 const TransactionTypes = lazy(() => import("./pages/settings/TransactionTypes"));
 const Categories = lazy(() => import("./pages/settings/Categories"));
@@ -125,6 +126,7 @@ export default function App() {
       >
         <Route index element={<Navigate to="messages" replace />} />
         <Route path="messages/:slug?" element={<AdminMessages />} />
+        <Route path="notifications" element={<AdminNotifications />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="admins" element={<AdminAdmins />} />
       </Route>

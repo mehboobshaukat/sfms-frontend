@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -128,15 +128,22 @@ function MessageDetail({ message, onPatch, onTrash, onRestore, onSent, onBack })
 
         {message.replies.length > 0 && (
           <div className="mt-6 space-y-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-nav">Replies ({message.replies.length})</p>
-            {message.replies.map((reply, i) => (
-              <div key={i} className="rounded-xl border border-cardBorder bg-primary-soft/40 p-3.5">
-                <p className="text-xs text-muted">
-                  <span className="font-bold text-ink">{reply.admin_name}</span> · {formatDateTime(reply.created_at)} · {reply.subject}
-                </p>
-                <div className="mt-2 whitespace-pre-wrap break-words text-sm text-ink">{reply.body}</div>
-              </div>
-            ))}
+            <p className="text-xs font-bold uppercase tracking-wide text-nav">Conversation ({message.replies.length})</p>
+            {message.replies.map((reply, i) => {
+              const fromCustomer = reply.direction === "inbound";
+              return (
+                <div key={i} className={`rounded-xl border p-3.5 ${fromCustomer ? "border-gold/30 bg-gold-light/40" : "border-cardBorder bg-primary-soft/40"}`}>
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                    <span className="font-bold text-ink">{reply.admin_name}</span>
+                    {fromCustomer && <Badge tone="gold">Customer reply</Badge>}
+                    {reply.source === "gmail" && <Badge tone="neutral">via Gmail</Badge>}
+                    <span>· {formatDateTime(reply.created_at)} · {reply.subject}</span>
+                  </p>
+                  {/* email text: always plain text, never HTML */}
+                  <div className="mt-2 whitespace-pre-wrap break-words text-sm text-ink">{reply.body}</div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -150,7 +157,7 @@ function MessageDetail({ message, onPatch, onTrash, onRestore, onSent, onBack })
 export default function Messages() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { stats, refreshStats } = useAdmin();
+  const { stats, refreshStats, activityTick } = useAdmin();
 
   const [view, setView] = useState("inbox");
   const [statusFilter, setStatusFilter] = useState("");
@@ -170,8 +177,8 @@ export default function Messages() {
   const [deleting, setDeleting] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  const loadList = useCallback(async () => {
-    setLoading(true);
+  const loadList = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const result = await adminApi.listMessages({
         view,
@@ -194,7 +201,64 @@ export default function Messages() {
 
   useEffect(() => { loadList(); }, [loadList]);
 
+  // Live updates: the layout bumps activityTick when the inbox changed on the server
+  // (new contact message, reply from Gmail / the customer, another admin's change).
+  const firstTick = useRef(true);
+  useEffect(() => {
+    if (firstTick.current) { firstTick.current = false; return undefined; }
+    loadList(true);
+    if (!slug) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        let data = await adminApi.getMessage(slug);
+        if (!alive) return;
+        if (!data.is_read && !data.is_trashed) {   // a reply arrived while this thread is open
+          data = await adminApi.updateMessage(slug, { is_read: true });
+          if (!alive) return;
+          refreshStats();
+        }
+        setDetail((current) => (current && current.slug === slug ? data : current));
+      } catch {
+        /* the next change will refresh it */
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityTick]);
+
   const afterChange = useCallback(() => { loadList(); refreshStats(); }, [loadList, refreshStats]);
+
+  // Gmail <-> panel sync: pulls replies written in Gmail / by customers into the threads.
+  const [syncing, setSyncing] = useState(false);
+  const syncGmail = useCallback(async ({ silent = false } = {}) => {
+    setSyncing(true);
+    try {
+      const result = await adminApi.syncMessages(true);
+      if (!result.enabled) {
+        if (!silent) toast("Gmail sync is switched off on the server (MAIL_SYNC_ENABLED).");
+        return;
+      }
+      if (result.errors?.length) {
+        if (!silent) toast.error(result.errors[0]);
+        return;
+      }
+      if (result.imported > 0) {
+        toast.success(`${result.imported} new email${result.imported === 1 ? "" : "s"} synced from Gmail.`);
+        loadList();
+        refreshStats();
+        if (slug) setDetail(await adminApi.getMessage(slug));
+      } else if (!silent) {
+        toast.success("Already up to date.");
+      }
+    } catch (err) {
+      if (!silent) toast.error(apiErrorMessage(err));
+    } finally {
+      setSyncing(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadList, refreshStats, slug]);
+
 
   // Open message: load it, and quietly mark it read the first time it is opened.
   useEffect(() => {
@@ -300,7 +364,12 @@ export default function Messages() {
       <PageHeader
         eyebrow="Inbox"
         title="Contact messages"
-        subtitle="Messages sent through the public contact form. Reply by email, archive them, or move them to the trash."
+        subtitle="Messages sent through the public contact form. Reply here or from Gmail: both stay in sync. Archive them or move them to the trash."
+        actions={(
+          <Button variant="secondary" size="sm" loading={syncing} onClick={() => syncGmail()}>
+            <Icon name="refresh" size={14} /> Sync Gmail
+          </Button>
+        )}
       />
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">

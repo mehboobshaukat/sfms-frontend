@@ -16,6 +16,19 @@ export const adminApi = {
   trashMessage: (slug) => apiClient.delete(`/admin/messages/${enc(slug)}`),
   restoreMessage: (slug) => apiClient.post(`/admin/messages/${enc(slug)}/restore`).then(data),
   replyToMessage: (slug, payload) => apiClient.post(`/admin/messages/${enc(slug)}/replies`, payload).then(data),
+  // Pulls new Gmail / customer replies into the threads -> { enabled, imported, skipped, errors }
+  // force=true skips the server's 10 s throttle (the "Sync Gmail" button); the background loop doesn't force.
+  syncMessages: (force = false) => apiClient.post("/admin/messages/sync", null, { params: force ? { force: true } : undefined }).then(data),
+  // Cheap poll: { token, unread, notifications_unread, latest } - `token` changes when anything in the inbox changes.
+  messagesActivity: () => apiClient.get("/admin/messages/activity").then(data),
+
+  // ---- notifications + email service (primary / fallback senders) ----
+  listNotifications: (params) => apiClient.get("/admin/notifications", { params }).then(data),
+  notificationUnreadCount: () => apiClient.get("/admin/notifications/unread-count").then(data),
+  markNotificationRead: (slug) => apiClient.post(`/admin/notifications/${enc(slug)}/read`).then(data),
+  markAllNotificationsRead: () => apiClient.post("/admin/notifications/read-all").then(data),
+  emailServiceStatus: () => apiClient.get("/admin/email-service").then(data),
+  activatePrimaryEmail: (channel) => apiClient.post(`/admin/email-service/${enc(channel)}/activate-primary`).then(data),
 
   // ---- users ----
   listUsers: (params) => apiClient.get("/admin/users", { params }).then(data),

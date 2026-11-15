@@ -16,13 +16,14 @@ function initials(value) {
   return value.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "A";
 }
 
-export default function AdminSidebar({ me, unread = 0, onNavigate }) {
+export default function AdminSidebar({ me, unread = 0, notifUnread = 0, onNavigate }) {
   const { user } = useAuth();
   const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() || user?.username || "Admin";
   const avatar = backendAssetUrl(user?.profile_image_url);
 
   const items = [
     { to: "/admin/messages", label: "Messages", icon: "mail", badge: unread },
+    { to: "/admin/notifications", label: "Notifications", icon: "bell", badge: notifUnread },
     { to: "/admin/users", label: "Users", icon: "users" },
     ...(me?.capabilities?.manage_admins ? [{ to: "/admin/admins", label: "Admins", icon: "shield" }] : []),
   ];
