@@ -122,7 +122,7 @@
     .wtx { grid-area: tx; margin: 0; }
     .wtx p { max-width: none; margin-left: 0; }
     .wpv { grid-area: pv; min-height: 0; max-height: 0; margin-top: 0; overflow: hidden; transition: opacity 0.45s, max-height 0.6s ease, margin 0.6s ease, translate 0.6s ease, scale 0.6s ease; }
-    .wst.on .wpv { max-height: 150px; margin-top: 12px; }
+    .wst.on .wpv { max-height: 420px; margin-top: 12px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .wsg { opacity: 1; translate: none; animation: none !important; }

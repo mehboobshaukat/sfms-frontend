@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Line, Doughnut } from "react-chartjs-2";
@@ -213,6 +214,165 @@ function DashboardHeader({ user }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- hero dropdowns (Add Transaction + date range) ---------- */
+// The menus are drawn in a portal with fixed positioning, so the hero's rounded clipping can never cut them off.
+function useFloatingMenu({ align = "left", minWidth = 0 } = {}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const ready = pos !== null;
+
+  const place = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const r = trigger.getBoundingClientRect();
+    const width = Math.max(minWidth, r.width);
+    const vw = document.documentElement.clientWidth;
+    const vh = window.innerHeight;
+    const left = Math.min(Math.max(8, align === "right" ? r.right - width : r.left), Math.max(8, vw - width - 8));
+    const height = menuRef.current ? menuRef.current.offsetHeight : 0;
+    // Open upwards only when there is no room below and more room above.
+    const up = height > 0 && vh - r.bottom < height + 16 && r.top > vh - r.bottom;
+    setPos({ left, width, up, top: up ? "auto" : r.bottom + 8, bottom: up ? vh - r.top + 8 : "auto" });
+  }, [align, minWidth]);
+
+  useLayoutEffect(() => { if (open) place(); }, [open, place]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = () => setOpen(false);
+    const onDown = (e) => {
+      if (menuRef.current?.contains(e.target) || triggerRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === "Escape") { setOpen(false); triggerRef.current?.focus(); } };
+    const onScroll = (e) => { if (!menuRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open]);
+
+  // Once the menu is visible, move focus to the selected option (or the first item) for keyboard users.
+  useEffect(() => {
+    if (!open || !ready) return;
+    const el = menuRef.current?.querySelector('[aria-selected="true"], [data-mi]');
+    if (el) el.focus({ preventScroll: true });
+  }, [open, ready]);
+
+  const toggle = () => { setPos(null); setOpen((v) => !v); };
+
+  const onMenuKey = (e) => {
+    const items = Array.from(menuRef.current?.querySelectorAll("[data-mi]") || []);
+    if (!items.length) return;
+    const i = items.indexOf(document.activeElement);
+    let next = null;
+    if (e.key === "ArrowDown") next = items[(i + 1) % items.length];
+    else if (e.key === "ArrowUp") next = items[(i - 1 + items.length) % items.length];
+    else if (e.key === "Home") next = items[0];
+    else if (e.key === "End") next = items[items.length - 1];
+    else if (e.key === "Tab") { e.preventDefault(); setOpen(false); triggerRef.current?.focus(); return; }
+    if (next) { e.preventDefault(); next.focus(); }
+  };
+
+  const menuProps = {
+    ref: menuRef,
+    onKeyDown: onMenuKey,
+    "data-up": pos && pos.up ? "1" : undefined,
+    style: pos ? { left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom } : { left: 0, top: 0, visibility: "hidden" },
+  };
+  const onTriggerKey = (e) => { if (e.key === "ArrowDown" && !open) { e.preventDefault(); toggle(); } };
+
+  return { open, setOpen, toggle, triggerRef, menuProps, onTriggerKey };
+}
+
+const MenuTick = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+);
+const MenuGo = () => (
+  <svg className="sfms-dd-go" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+);
+
+function HeroControls({ range, onChange }) {
+  const addMenu = useFloatingMenu({ align: "right" });
+  const rangeMenu = useFloatingMenu({ align: "left" });
+  const options = DATE_RANGES.filter((r) => r.value !== "custom");
+  const selected = options.find((r) => r.value === range) || options[0];
+
+  return (
+    <div className="flex flex-wrap items-center justify-start gap-2.5 lg:justify-end">
+      <button
+        type="button"
+        ref={rangeMenu.triggerRef}
+        onClick={rangeMenu.toggle}
+        onKeyDown={rangeMenu.onTriggerKey}
+        aria-haspopup="listbox"
+        aria-expanded={rangeMenu.open}
+        aria-label={`Date range: ${selected?.label || ""}`}
+        className="sfms-range-btn relative flex h-11 w-full items-center rounded-xl border border-white/20 bg-white/10 pl-9 pr-9 text-left text-[13px] font-semibold text-white outline-none backdrop-blur transition hover:bg-white/15 sm:w-[168px]"
+      >
+        <Icon name="calendar" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#b9cbee]" />
+        <span className="truncate">{selected?.label}</span>
+        <Icon name="arrowDown" size={14} className="sfms-chev pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#b9cbee]" />
+      </button>
+      {rangeMenu.open && createPortal(
+        <div {...rangeMenu.menuProps} className="sfms-dd" role="listbox" aria-label="Date range">
+          {options.map((r) => (
+            <button
+              key={r.value}
+              type="button"
+              role="option"
+              aria-selected={r.value === range}
+              data-mi
+              className={`sfms-dd-opt${r.value === range ? " on" : ""}`}
+              onClick={() => { onChange(r.value); rangeMenu.setOpen(false); rangeMenu.triggerRef.current?.focus(); }}
+            >
+              <span>{r.label}</span>
+              {r.value === range && <MenuTick />}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+
+      <button
+        type="button"
+        ref={addMenu.triggerRef}
+        onClick={addMenu.toggle}
+        onKeyDown={addMenu.onTriggerKey}
+        aria-haspopup="menu"
+        aria-expanded={addMenu.open}
+        className="sfms-add-btn inline-flex h-11 w-full items-center justify-between gap-2 rounded-xl bg-white px-5 text-[13px] font-extrabold text-[#0a47d6] shadow-[0_12px_28px_rgba(2,8,28,0.35)] transition hover:-translate-y-0.5 sm:w-auto"
+      >
+        <span className="inline-flex items-center gap-2"><Icon name="plus" size={17} /> Add Transaction</span>
+        <Icon name="arrowDown" size={14} className="sfms-chev" />
+      </button>
+      {addMenu.open && createPortal(
+        <div {...addMenu.menuProps} className="sfms-dd" role="menu" aria-label="Add a transaction">
+          <Link to="/transactions/new" role="menuitem" data-mi className="sfms-dd-item" onClick={() => addMenu.setOpen(false)}>
+            <span className="sfms-dd-ico"><Icon name="plus" size={18} /></span>
+            <span className="min-w-0"><b>Add transaction</b><small>Fill in the form yourself</small></span>
+            <MenuGo />
+          </Link>
+          <Link to="/ai-assistant" role="menuitem" data-mi className="sfms-dd-item" onClick={() => addMenu.setOpen(false)}>
+            <span className="sfms-dd-ico"><Icon name="spark" size={18} /></span>
+            <span className="min-w-0"><b>Add with AI</b><small>Write it in plain words</small></span>
+            <MenuGo />
+          </Link>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
@@ -484,18 +644,7 @@ export default function Dashboard() {
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-start gap-2.5 lg:justify-end">
-              <label className="relative w-full sm:w-[168px]">
-                <Icon name="calendar" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#b9cbee]" />
-                <select value={range} onChange={(e) => setRange(e.target.value)} className="h-11 w-full appearance-none rounded-xl border border-white/20 bg-white/10 pl-9 pr-9 text-[13px] font-semibold text-white outline-none backdrop-blur transition focus:border-[#17c8f2] [&>option]:text-[#0b1d45]" aria-label="Date range">
-                  {DATE_RANGES.filter((r) => r.value !== "custom").map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-                <Icon name="arrowDown" size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#b9cbee]" />
-              </label>
-              <Link to="/transactions/new" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-[13px] font-extrabold text-[#0a47d6] no-underline shadow-[0_12px_28px_rgba(2,8,28,0.35)] transition hover:-translate-y-0.5 sm:w-auto">
-                <Icon name="plus" size={17} /> Add Transaction
-              </Link>
-            </div>
+            <HeroControls range={range} onChange={setRange} />
             <div className="relative min-h-[150px] flex-1">
               <Line data={heroLineData} options={heroLineOptions} />
               {!heroHasData && <span className="absolute left-1/2 top-[42%] -translate-x-1/2 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-medium text-[#d6e4ff] backdrop-blur">No cash-flow data yet</span>}

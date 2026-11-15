@@ -11,3 +11,84 @@
 .sfms-ring b { position: relative; font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif; font-size: 1.05rem; font-weight: 800; color: #0b1d45; }
 .sfms-ring.warn { --c: #f5a524; } .sfms-ring.bad { --c: #e5304f; }
 @media (prefers-reduced-motion: reduce) { .sfms-hero { animation: none; } }
+
+/* ---------- Hero controls: date range + Add Transaction ----------
+   Both triggers share one height, radius and type style so they read as a single toolbar. */
+.sfms-hero .sfms-range-btn,
+.sfms-hero .sfms-add-btn {
+  height: 46px; border-radius: 14px; font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif; font-size: 13.5px; letter-spacing: 0.005em; cursor: pointer;
+}
+.sfms-hero .sfms-range-btn {
+  font-weight: 700; color: #f2f7ff; background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.sfms-hero .sfms-range-btn:hover { border-color: rgba(255, 255, 255, 0.32); background: rgba(255, 255, 255, 0.12); }
+.sfms-hero .sfms-range-btn[aria-expanded="true"],
+.sfms-hero .sfms-range-btn:focus-visible { border-color: #17c8f2; background: rgba(255, 255, 255, 0.14); box-shadow: 0 0 0 3px rgba(23, 200, 242, 0.2); outline: none; }
+.sfms-hero .sfms-range-btn > svg { color: #7ee3ff; }
+
+.sfms-hero .sfms-add-btn {
+  font-weight: 800; color: #fff; border: 0;
+  background: linear-gradient(115deg, #17c8f2 0%, #1565ff 100%);
+  box-shadow: 0 12px 26px -8px rgba(23, 200, 242, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.sfms-hero .sfms-add-btn:hover { box-shadow: 0 16px 30px -8px rgba(23, 200, 242, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.sfms-hero .sfms-add-btn[aria-expanded="true"],
+.sfms-hero .sfms-add-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35), 0 16px 30px -8px rgba(23, 200, 242, 0.7); }
+.sfms-chev { transition: rotate 0.22s ease; }
+[aria-expanded="true"] > .sfms-chev { rotate: 180deg; }
+
+/* ---------- Floating panels (portaled to body) ----------
+   Same language as the dashboard cards: white surface, soft blue-tinted border, small uppercase heading. */
+.sfms-dd {
+  position: fixed; z-index: 80; box-sizing: border-box; padding: 8px;
+  border: 1px solid rgba(21, 101, 255, 0.12); border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); color: #0b1d45;
+  font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+  box-shadow: 0 30px 60px -18px rgba(6, 19, 48, 0.42), 0 10px 24px -12px rgba(21, 101, 255, 0.25);
+  transform-origin: top center; animation: sfms-dd-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sfms-dd::before {
+  content: attr(aria-label); display: block; padding: 8px 12px 10px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #6b7fa6;
+}
+.sfms-dd[data-up] { transform-origin: bottom center; animation-name: sfms-dd-up; }
+
+/* Date range options */
+.sfms-dd-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 11px 12px;
+  border: 0; border-radius: 12px; background: transparent; color: #1b2c52; font: inherit; font-size: 14px; font-weight: 650;
+  text-align: left; cursor: pointer; transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.sfms-dd-opt + .sfms-dd-opt { margin-top: 2px; }
+.sfms-dd-opt:hover, .sfms-dd-opt:focus-visible { background: #f1f6ff; outline: none; }
+.sfms-dd-opt.on { background: linear-gradient(90deg, #e9f2ff, #f4f9ff); color: #0a47d6; font-weight: 800; box-shadow: inset 3px 0 0 #1565ff; }
+.sfms-dd-opt svg {
+  flex: none; width: 22px; height: 22px; padding: 4px; border-radius: 50%; color: #fff;
+  background: linear-gradient(135deg, #17c8f2, #1565ff); box-shadow: 0 4px 10px rgba(21, 101, 255, 0.35);
+}
+
+/* Add Transaction items */
+.sfms-dd-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 0; border-radius: 14px;
+  background: transparent; color: #0b1d45; text-align: left; text-decoration: none; cursor: pointer; transition: background 0.15s;
+}
+.sfms-dd-item + .sfms-dd-item { margin-top: 4px; }
+.sfms-dd-item:hover, .sfms-dd-item:focus-visible { background: #f1f6ff; outline: none; }
+.sfms-dd-ico {
+  display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 13px; color: #fff;
+  background: linear-gradient(135deg, #17c8f2, #1565ff); box-shadow: 0 8px 18px rgba(21, 101, 255, 0.28); transition: transform 0.25s;
+}
+.sfms-dd-item:hover .sfms-dd-ico, .sfms-dd-item:focus-visible .sfms-dd-ico { transform: scale(1.06); }
+.sfms-dd-item b { display: block; font-size: 14px; font-weight: 800; line-height: 1.25; color: #0b1d45; }
+.sfms-dd-item small { display: block; margin-top: 3px; font-size: 12px; line-height: 1.3; color: #6b7fa6; }
+.sfms-dd-go {
+  flex: none; margin-left: auto; color: #9fb3d6; transition: transform 0.2s, color 0.2s;
+}
+.sfms-dd-item:hover .sfms-dd-go, .sfms-dd-item:focus-visible .sfms-dd-go { transform: translateX(3px); color: #1565ff; }
+
+@media (max-width: 640px) { .sfms-dd { max-width: calc(100vw - 16px); } }
+
+@keyframes sfms-dd-in { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+@keyframes sfms-dd-up { from { opacity: 0; transform: translateY(6px) scale(0.97); } }
+@media (prefers-reduced-motion: reduce) { .sfms-dd { animation: none; } .sfms-dd-ico, .sfms-dd-go, .sfms-chev { transition: none; } }
