@@ -37,15 +37,15 @@ const BUDGETS = [["Food & Dining", "₹7,800 / ₹10,000", 78, "#1565ff"], ["Tra
 const SEC = [["lock", "Secure sign-in", "Multi-factor authentication and encrypted access."], ["shield", "Verified access", "Only you can open your financial data."], ["db", "Data integrity", "Accurate, consistent and always backed up."], ["eye", "Transparent history", "Full activity logs so nothing happens unseen."]];
 // Sample testimonial content for the UI. Replace these examples with verified customer feedback before production.
 const REVIEWS = [
-  { name: "Priya M.", role: "Student", quote: "SFMS helped me finally get control of my spending. The budgeting tools make it easier to plan my month.", avatar: 47 },
-  { name: "Rahul S.", role: "Freelancer", quote: "I love how simple and clean it is. Tracking my loans and goals has never been easier. Everything is in one place.", avatar: 12 },
-  { name: "Ananya K.", role: "Working professional", quote: "A helpful way to keep everyday finances organized. I can review my spending without juggling separate notes.", avatar: 32 },
-  { name: "Omar H.", role: "Small business owner", quote: "Having income, expenses and pending payments together gives me a clearer picture of my cash flow.", avatar: 13 },
-  { name: "Sana R.", role: "Teacher", quote: "Monthly budgets help me plan ahead and notice when a category is getting close to its limit.", avatar: 44 },
-  { name: "Hamza A.", role: "Software developer", quote: "The transaction history is useful when I need to review an entry or understand a change I made.", avatar: 68 },
-  { name: "Ayesha F.", role: "Consultant", quote: "I like having savings goals and day-to-day spending in one straightforward view.", avatar: 49 },
-  { name: "Bilal T.", role: "Accountant", quote: "The organized records make my regular money reviews feel more structured and less stressful.", avatar: 59 },
-  { name: "Mariam N.", role: "Graduate student", quote: "SFMS helps me see my habits more clearly and think about what I can set aside for later.", avatar: 25 },
+  { name: "Fatima Z.", role: "Student", quote: "SFMS helped me finally get control of my spending. The budgeting tools make it easier to plan my month.", image: "/reviews/fatima.webp" },
+  { name: "Hassan R.", role: "Freelancer", quote: "I love how simple and clean it is. Tracking my loans and goals has never been easier. Everything is in one place.", image: "/reviews/hassan.webp" },
+  { name: "Zainab K.", role: "Working professional", quote: "A helpful way to keep everyday finances organized. I can review my spending without juggling separate notes.", image: "/reviews/zainab.webp" },
+  { name: "Usman H.", role: "Small business owner", quote: "Having income, expenses and pending payments together gives me a clearer picture of my cash flow.", image: "/reviews/usman.webp" },
+  { name: "Sana R.", role: "Teacher", quote: "Monthly budgets help me plan ahead and notice when a category is getting close to its limit.", image: "/reviews/sana.webp" },
+  { name: "Hamza A.", role: "Software developer", quote: "The transaction history is useful when I need to review an entry or understand a change I made.", image: "/reviews/hamza.webp" },
+  { name: "Ayesha F.", role: "Consultant", quote: "I like having savings goals and day-to-day spending in one straightforward view.", image: "/reviews/ayesha.webp" },
+  { name: "Bilal T.", role: "Accountant", quote: "The organized records make my regular money reviews feel more structured and less stressful.", image: "/reviews/bilal.webp" },
+  { name: "Mariam N.", role: "Graduate student", quote: "SFMS helps me see my habits more clearly and think about what I can set aside for later.", image: "/reviews/mariam.webp" },
 ];
 const FAQ = [
   ["Is SFMS free to use?", "Yes. You can start for free, and no credit card is required."],
@@ -429,7 +429,7 @@ export default function Home() {
               <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M5 4h14a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-6.2L8 21.5V18H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z" /><path fill="none" stroke="#e3f0ff" strokeWidth="1.7" strokeLinecap="round" d="M8.6 10.4h6.8M9.2 13.3c1.6 1.2 4 1.2 5.6 0" /></svg>
               What our users say
             </span>
-            <h2>Trusted by <span className="grad">thousands</span></h2>
+            <h2>What Users <span className="grad">Think</span></h2>
             <p>Real people. Real results. Here&rsquo;s what our users have to say about SFMS and how it has helped them take control of their finances.</p>
           </div>
 
@@ -477,7 +477,7 @@ export default function Home() {
                       <footer className="review-person">
                         <span className="avatar sm">
                           <span className="avatar-fb" aria-hidden="true">{review.name.split(" ").map((part) => part[0]).join("")}</span>
-                          <img className="avatar-img" src={`https://i.pravatar.cc/180?img=${review.avatar}`} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                          <img className="avatar-img" src={review.image} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                         </span>
                         <span className="review-person-copy">
                           <strong>{review.name}</strong>
@@ -491,7 +491,7 @@ export default function Home() {
                     <span className="avatar lg" aria-hidden="true">
                       <span className="avatar-ring" />
                       <span className="avatar-fb">{review.name.split(" ").map((part) => part[0]).join("")}</span>
-                      <img className="avatar-img" src={`https://i.pravatar.cc/180?img=${review.avatar}`} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      <img className="avatar-img" src={review.image} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                     </span>
                   </article>
                   <RopeSet side={reviewIndex === i ? " near-l" : reviewIndex === (i + 1) % REVIEWS.length ? " near-r" : ""} innerRef={(node) => { reviewRopeRefs.current[i] = node; }} />
