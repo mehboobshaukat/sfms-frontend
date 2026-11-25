@@ -14,6 +14,8 @@ import { Input } from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
 import LocationFields from "../components/location/LocationFields";
 import Avatar from "../components/ui/Avatar";
+import ActiveSessions from "../components/profile/ActiveSessions";
+import { authApi } from "../api/auth";
 
 const DELETION_OPTIONS = [
   {
@@ -78,6 +80,7 @@ export default function Profile() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deletionType, setDeletionType] = useState("scheduled");
   const [confirmText, setConfirmText] = useState("");
@@ -183,13 +186,16 @@ export default function Profile() {
   const openDeleteModal = () => {
     setDeletionType("scheduled");
     setConfirmText("");
+    setDeletePassword("");
     setDeleteOpen(true);
   };
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
     try {
-      const res = await usersApi.deleteMe(deletionType);
+      // Deleting (or scheduling deletion of) the account needs fresh proof of identity.
+      const reauthToken = await authApi.reauth(deletePassword);
+      const res = await usersApi.deleteMe(deletionType, reauthToken);
       if (deletionType === "instant") {
         toast.success("Account and all its data permanently deleted.");
         await logout();
@@ -352,6 +358,8 @@ export default function Profile() {
           </CardBody>
         </Card>
 
+        <ActiveSessions />
+
         <Card className="border-danger/30">
           <CardHeader title="Delete Account" />
           <CardBody>
@@ -393,7 +401,7 @@ export default function Profile() {
             <Button variant="secondary" onClick={() => setDeleteOpen(false)} disabled={deleting}>
               Cancel
             </Button>
-            <Button variant="danger" onClick={handleDeleteAccount} loading={deleting} disabled={!instantConfirmed}>
+            <Button variant="danger" onClick={handleDeleteAccount} loading={deleting} disabled={!instantConfirmed || !deletePassword || user?.password_set === false}>
               {deletionType === "instant" ? "Delete permanently, now" : "Schedule deletion"}
             </Button>
           </>
@@ -422,6 +430,20 @@ export default function Profile() {
               </div>
             </label>
           ))}
+
+          {user?.password_set === false ? (
+            <p className="text-xs text-muted leading-relaxed">
+              Your account signs in with Google and has no password yet. Use &ldquo;Forgot password&rdquo; on the login page to choose one, then come back to delete the account.
+            </p>
+          ) : (
+            <Input
+              label="Confirm with your password"
+              type="password"
+              autoComplete="current-password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+            />
+          )}
 
           {deletionType === "instant" && (
             <div className="pt-1">

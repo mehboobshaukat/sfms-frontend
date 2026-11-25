@@ -11,6 +11,7 @@ export const usersApi = {
   removeProfileImage: () => apiClient.delete("/users/me/profile-image"),
   changePassword: (payload) => apiClient.put("/users/me/password", payload).then((r) => r.data),
   // deletion_type: "scheduled" (default, 30-day grace period) | "instant" (immediate, irreversible)
-  deleteMe: (deletion_type = "scheduled") => apiClient.delete("/users/me", { data: { deletion_type } }).then((r) => r.data),
+  deleteMe: (deletion_type = "scheduled", reauthToken) =>
+    apiClient.delete("/users/me", { data: { deletion_type }, headers: { "X-Reauth-Token": reauthToken } }).then((r) => r.data),
   cancelDeletion: () => apiClient.post("/users/me/cancel-deletion").then((r) => r.data),
 };

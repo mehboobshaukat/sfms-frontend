@@ -7,9 +7,10 @@ import { apiErrorMessage } from "../../api/client";
 import Button from "../../components/ui/Button";
 import AuthShell, { AuthAlert, AuthLink, Field } from "../../components/auth/AuthShell";
 import Seo from "../../components/Seo";
+import GoogleAuth from "../../components/auth/GoogleAuth";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, notice, clearNotice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ email: "", password: "" });
@@ -21,6 +22,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    clearNotice();
     setNeedsVerification(false);
     setLoading(true);
     try {
@@ -60,7 +62,9 @@ export default function Login() {
         side="login" icon="lock" title="Welcome back" subtitle="Log in to your SFMS account."
         footer={<>Don't have an account? <Link to="/register">Create one</Link></>}
       >
+        <GoogleAuth onSuccess={() => navigate(location.state?.from?.pathname || "/dashboard", { replace: true })} />
         <form onSubmit={handleSubmit} noValidate>
+          {notice && !error && <AuthAlert>{notice}</AuthAlert>}
           {error && <AuthAlert>{error}</AuthAlert>}
           <Field
             label="Email" icon="mail" type="email" required autoComplete="email" placeholder="you@example.com"

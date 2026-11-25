@@ -8,6 +8,7 @@ import AuthShell, { AuthAlert, Field } from "../../components/auth/AuthShell";
 import { Ic } from "../public/sfmsUi";
 import Seo from "../../components/Seo";
 import LocationFields from "../../components/location/LocationFields";
+import GoogleAuth from "../../components/auth/GoogleAuth";
 
 const USERNAME_RE = /^[A-Za-z][A-Za-z0-9_]{2,49}$/;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -137,6 +138,7 @@ export default function Register() {
         side="register" icon="user" wide title="Create your account" subtitle="Start tracking your finances in a couple of minutes."
         footer={<>Already have an account? <Link to="/login">Log in</Link></>}
       >
+        <GoogleAuth label="signup_with" onSuccess={() => navigate("/dashboard", { replace: true })} />
         <form onSubmit={handleSubmit} noValidate>
           {error && <AuthAlert>{error}</AuthAlert>}
 

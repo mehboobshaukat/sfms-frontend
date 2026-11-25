@@ -1,6 +1,17 @@
 import axios from "axios";
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
+/**
+ * Base URL of the SFMS API, including the /api prefix.
+ *
+ *   "/api"                         (default) the website proxies /api/* to the backend (see vercel.json and
+ *                                   the dev proxy in vite.config.js). The browser only ever talks to ONE origin,
+ *                                   so the refresh cookie is first-party and works even if the website and the
+ *                                   API live on completely different domains.
+ *   "https://api.sfms.xyz/api"     direct calls. Only valid when the site and the API share a registrable
+ *                                   domain (sfms.xyz + api.sfms.xyz); then the backend's CORS_ORIGINS must list
+ *                                   this site and WEB_COOKIE_DOMAIN may be set.
+ */
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
 
 /** Resolve backend-served media such as /media/profile_images/... against the API host. */
 export function backendAssetUrl(value) {
@@ -14,23 +25,71 @@ export function backendAssetUrl(value) {
   }
 }
 
-const ACCESS_KEY = "sfms_access_token";
-const REFRESH_KEY = "sfms_refresh_token";
+// ---------------------------------------------------------------------------
+// Session handling
+//
+//  * The ACCESS token lives only in this JavaScript variable. It is never written to localStorage /
+//    sessionStorage / cookies, so a page reload starts without one and silently asks for a new one.
+//  * The REFRESH credential is an HttpOnly cookie set by the backend. JavaScript cannot read it.
+//  * Every call that depends on that cookie carries `X-SFMS-Client: web` (CSRF protection).
+// ---------------------------------------------------------------------------
+const AUTH = "/web/auth";
+const CLIENT_HEADERS = { "X-SFMS-Client": "web" };
+const SIGNED_IN_HINT = "sfms_signed_in"; // not a secret: lets signed-out visitors skip a pointless refresh call
+
+let accessToken = null;
+let sessionExpiresAt = null;
+
+const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("sfms-auth") : null;
 
 export const tokenStore = {
-  getAccess: () => localStorage.getItem(ACCESS_KEY),
-  getRefresh: () => localStorage.getItem(REFRESH_KEY),
-  set: (access, refresh) => {
-    localStorage.setItem(ACCESS_KEY, access);
-    localStorage.setItem(REFRESH_KEY, refresh);
+  getAccess: () => accessToken,
+  getSessionExpiresAt: () => sessionExpiresAt,
+  /** Stores the result of a login / refresh response. */
+  setSession: (data) => {
+    accessToken = data.access_token;
+    sessionExpiresAt = data.session_expires_at ? new Date(data.session_expires_at) : null;
+    try { localStorage.setItem(SIGNED_IN_HINT, "1"); } catch { /* storage blocked: fine */ }
   },
   clear: () => {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    accessToken = null;
+    sessionExpiresAt = null;
+    try { localStorage.removeItem(SIGNED_IN_HINT); } catch { /* ignore */ }
+  },
+  mayHaveSession: () => {
+    try { return localStorage.getItem(SIGNED_IN_HINT) === "1"; } catch { return true; }
   },
 };
 
-export const apiClient = axios.create({ baseURL: API_BASE_URL });
+/** Messages for the ways a session can end (codes come from the backend's `detail.code`). */
+const SESSION_END_MESSAGES = {
+  session_expired: "Your session has expired. Please log in again.",
+  session_revoked: "For your security this session was ended. Please log in again.",
+  session_ended: "Your session has ended. Please log in again.",
+  no_session: "Please log in to continue.",
+};
+
+export function sessionEndMessage(code) {
+  return SESSION_END_MESSAGES[code] || "Please log in again to continue.";
+}
+
+/** Tells the app (and other tabs) that this browser no longer has a session. */
+export function endSession(code, { broadcast = true } = {}) {
+  tokenStore.clear();
+  window.dispatchEvent(new CustomEvent("sfms:session-ended", { detail: { code } }));
+  if (broadcast && channel) channel.postMessage({ type: "session-ended", code });
+}
+if (channel) {
+  channel.onmessage = (ev) => {
+    if (ev.data?.type === "session-ended") endSession(ev.data.code, { broadcast: false });
+  };
+}
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true, // the refresh cookie is only ever sent to /web/auth/*; harmless elsewhere
+  headers: CLIENT_HEADERS,
+});
 
 apiClient.interceptors.request.use((config) => {
   const token = tokenStore.getAccess();
@@ -38,33 +97,46 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// ---- Auto-refresh-on-401 with a single in-flight refresh shared by all callers ----
+// ---- Refresh: one in-flight call per tab, serialised across tabs --------------------------------
 let refreshPromise = null;
 
-async function performRefresh() {
-  const refresh_token = tokenStore.getRefresh();
-  if (!refresh_token) throw new Error("No refresh token");
-  const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refresh_token });
-  tokenStore.set(res.data.access_token, res.data.refresh_token);
+async function requestRefresh() {
+  const res = await axios.post(`${API_BASE_URL}${AUTH}/refresh`, null, { withCredentials: true, headers: CLIENT_HEADERS });
+  tokenStore.setSession(res.data);
   return res.data.access_token;
 }
+
+/**
+ * Exchanges the refresh cookie for a new access token. Browser tabs share one cookie, so concurrent
+ * refreshes from several tabs are queued with the Web Locks API instead of racing each other.
+ */
+export function refreshAccessToken() {
+  if (!refreshPromise) {
+    const run = () => requestRefresh();
+    const locked = typeof navigator !== "undefined" && navigator.locks ? navigator.locks.request("sfms-refresh", run) : run();
+    refreshPromise = Promise.resolve(locked).finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
+const isAuthUrl = (url = "") => url.includes(`${AUTH}/login`) || url.includes(`${AUTH}/refresh`) || url.includes(`${AUTH}/logout`);
 
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    const isAuthRoute = original?.url?.includes("/auth/login") || original?.url?.includes("/auth/refresh-token");
-
-    if (error.response?.status === 401 && !original._retry && !isAuthRoute && tokenStore.getRefresh()) {
+    if (error.response?.status === 401 && original && !original._retry && !isAuthUrl(original.url)) {
       original._retry = true;
       try {
-        if (!refreshPromise) refreshPromise = performRefresh().finally(() => (refreshPromise = null));
-        const newAccess = await refreshPromise;
+        const newAccess = await refreshAccessToken();
         original.headers.Authorization = `Bearer ${newAccess}`;
         return apiClient(original);
       } catch (refreshErr) {
-        tokenStore.clear();
-        window.location.href = "/login";
+        // Only a definite refusal ends the session. A network hiccup while refreshing must not log anyone out.
+        const status = refreshErr?.response?.status;
+        if (status === 401 || status === 403) {
+          endSession(refreshErr.response?.data?.detail?.code || "session_ended");
+        }
         return Promise.reject(refreshErr);
       }
     }
@@ -104,7 +176,12 @@ export function apiErrorMessage(error, fallback = "Something went wrong. Please 
   if (Array.isArray(detail) && detail.length) {
     return detail.map((d) => d.msg || JSON.stringify(d)).join(" ");
   }
-  if (error?.response?.status === 429) return "Too many requests. Please wait a moment and try again.";
+  if (error?.response?.status === 429) {
+    const wait = Number(error.response.headers?.["retry-after"]);
+    return wait > 0
+      ? `Too many attempts. Please try again in ${wait >= 90 ? `${Math.ceil(wait / 60)} minutes` : `${wait} seconds`}.`
+      : "Too many requests. Please wait a moment and try again.";
+  }
   if (error?.response?.status === 423) return detail || "Account temporarily locked. Try again later.";
   if (error?.message === "Network Error") return "Can't reach the server. Check your connection and try again.";
   return fallback;
