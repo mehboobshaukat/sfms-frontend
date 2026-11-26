@@ -65,7 +65,7 @@ export default function Register() {
     if (file.size > MAX_PROFILE_IMAGE_BYTES) {
       e.target.value = "";
       setProfileImage(null);
-      setError("Profile image must be 1 MB or smaller.");
+      setError(`Profile image must be ${MAX_PROFILE_IMAGE_BYTES} MB or smaller.`);
       return;
     }
     setProfileImage(file);
@@ -166,7 +166,7 @@ export default function Register() {
           <div className="au-sec"><i>3</i>Profile photo <span style={{ fontWeight: 600, textTransform: "none", letterSpacing: 0, color: "#62728f" }}>(optional)</span></div>
           <p style={{ color: 'red', fontSize: '11px' }}>Right now image function is disabled and will be enabled later.</p>
           <label className="au-file" style={{ cursor: 'not-allowed' }}>
-            <input disabled="true" cursor="none" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} />
+            <input disabled={true} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} />
             <span className="au-thumb">{previewUrl ? <img src={previewUrl} alt="Selected profile" /> : <Ic n="image" s={22} />}</span>
             <span><b>{profileImage ? profileImage.name : "Choose a photo"}</b><small>JPEG, PNG, or WebP up to 1 MB.</small></span>
           </label>

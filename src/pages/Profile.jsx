@@ -295,7 +295,7 @@ export default function Profile() {
                 This setting does not perform currency conversion.
               </div>
               <Input
-                disabled="true" // TEMPORARILY DISABLED AND WILL BE UPDATED LATER ###################
+                disabled={true} // TEMPORARILY DISABLED AND WILL BE UPDATED LATER ###################
                 label="Profile image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
